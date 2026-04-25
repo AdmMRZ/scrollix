@@ -14,7 +14,7 @@ from django.utils.dateparse import parse_datetime
 
 logger = logging.getLogger(__name__)
 MANGADEX_BASE = settings.MANGADEX_API_BASE
-REQUEST_TIMEOUT = 10
+REQUEST_TIMEOUT = 25  
 REQUEST_HEADERS = {
     'User-Agent': 'Scrollix/1.0 (personal manga reader; contact via github)',
 }
@@ -304,7 +304,7 @@ def get_homepage_data() -> dict:
         cache.set('home_featured_ids', featured_ids, getattr(settings, 'CACHE_TTL_MANGA', 86400))
 
     if not latest_ids:
-        raw_latest = fetch_latest_manga(limit=24)
+        raw_latest = fetch_latest_manga(limit=25)
         latest_ids = [m['id'] for m in raw_latest]
         for m in raw_latest:
             _save_manga_to_cache(m)
