@@ -1,23 +1,39 @@
 {% extends 'base.html' %}
-{% block title %}Login — Scrollix{% endblock %}
+{% block title %}Sign In — Scrollix{% endblock %}
 {% block content %}
 <div class="auth-wrapper">
   <div class="auth-card">
-    <h1 class="auth-title">Welcome back</h1>
-    <p class="auth-subtitle">Sign in to access your library and bookmarks.</p>
-    <form method="post" novalidate>
+    <h1 class="auth-title">Welcome Back</h1>
+    <p class="auth-subtitle">Sign in to continue tracking your manga journey.</p>
+    
+    <form method="post">
       {% csrf_token %}
-      {% for field in form %}
+      
+      {% if form.non_field_errors %}
+        {% for error in form.non_field_errors %}
+          <div class="form-error" style="margin-bottom: 1rem;">{{ error }}</div>
+        {% endfor %}
+      {% endif %}
+
       <div class="form-group">
-        <label class="form-label" for="{{ field.id_for_label }}">{{ field.label }}</label>
-        {{ field }}
-        {% for error in field.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
+        <label class="form-label" for="id_username">Username</label>
+        <input type="text" name="username" id="id_username" class="form-input" required>
+        {% for error in form.username.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
       </div>
-      {% endfor %}
-      <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;padding:0.7rem">Sign In</button>
+
+      <div class="form-group">
+        <label class="form-label" for="id_password">Password</label>
+        <input type="password" name="password" id="id_password" class="form-input" required>
+        {% for error in form.password.errors %}<div class="form-error">{{ error }}</div>{% endfor %}
+      </div>
+
+      <button type="submit" class="btn btn-cta" style="width:100%;justify-content:center;padding:0.7rem;margin-top:0.5rem">
+        Sign In
+      </button>
     </form>
-    <p style="margin-top:1.25rem;text-align:center;font-size:0.875rem;color:var(--color-muted)">
-      Don't have an account? <a href="{% url 'register' %}" style="color:var(--color-accent)">Register</a>
+
+    <p style="margin-top:1.5rem;text-align:center;font-size:0.875rem;color:var(--color-muted)">
+      Don't have an account? <a href="{% url 'register' %}" style="color:var(--color-accent)">Create Account</a>
     </p>
   </div>
 </div>
