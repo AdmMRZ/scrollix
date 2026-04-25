@@ -1,0 +1,71 @@
+{% extends 'base.html' %}
+{% load manga_extras %}
+{% block title %}My Library — Scrollix{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top:2rem;padding-bottom:3rem">
+  <h1 style="margin-bottom:1.5rem">My Library</h1>
+
+  <!-- ── Tabs ── -->
+  <nav class="lib-tabs" aria-label="Library sections">
+    {% for lt, label in bookmark_choices %}
+    <a href="?tab={{ lt }}" class="lib-tab {% if active_tab == lt %}active{% endif %}">
+      {{ label }}<span class="lib-badge">{{ counts|default_if_none:0|dict_get:lt|default:'0' }}</span>
+    </a>
+    {% endfor %}
+    <a href="?tab=history" class="lib-tab {% if active_tab == 'history' %}active{% endif %}">
+      History <span class="lib-badge">{{ history_count }}</span>
+    </a>
+  </nav>
+
+  <!-- ── Bookmark Grid ── -->
+  {% if active_tab != 'history' %}
+    {% if bookmarks %}
+    <div class="grid-manga">
+      {% for bm in bookmarks %}
+      <a href="{% url 'manga-detail' bm.manga.mangadex_id %}" class="manga-card">
+        <div class="manga-card-cover">
+          {% if bm.manga.cover_url %}
+          <img src="{{ bm.manga.cover_url }}" alt="{{ bm.manga.title }} cover"
+               loading="lazy" referrerpolicy="no-referrer">
+          {% else %}
+          <div class="skeleton" style="width:100%;height:100%"></div>
+          {% endif %}
+        </div>
+        <div class="manga-card-info">
+          <div class="manga-card-title">{{ bm.manga.title }}</div>
+          <div class="manga-card-meta">Added {{ bm.created_at|date:"M j, Y" }}</div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-state-title">Nothing here yet</div>
+      <p style="color:var(--color-muted)">Bookmark manga from the detail page to add them to this list.</p>
+      <a href="{% url 'browse' %}" class="btn btn-primary" style="margin-top:1rem">Browse Manga</a>
+    </div>
+    {% endif %}
+
+  <!-- ── Read History ── -->
+  {% else %}
+    {% if history %}
+    <div class="chapter-list">
+      {% for entry in history %}
+      <a href="{% url 'reader' entry.chapter.mangadex_id %}" class="chapter-item">
+        <span class="chapter-item-num">{{ entry.manga.title|truncatechars:30 }}</span>
+        <span class="chapter-item-title">{{ entry.chapter.display_number }}</span>
+        <span class="chapter-item-meta">{{ entry.read_at|date:"M j, Y" }}</span>
+      </a>
+      {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-state-title">No read history</div>
+      <p style="color:var(--color-muted)">Start reading manga to track your progress here.</p>
+    </div>
+    {% endif %}
+  {% endif %}
+
+</div>
+{% endblock %}

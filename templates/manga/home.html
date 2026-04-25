@@ -1,0 +1,101 @@
+{% extends 'base.html' %}
+{% block title %}Scrollix{% endblock %}
+
+{% block content %}
+<div class="container" style="padding-top:2rem">
+
+  <!-- ── Hero Carousel ── -->
+  {% if featured %}
+  <section aria-label="Featured manga">
+    <div class="hero-carousel">
+      <div class="carousel-track">
+        {% for manga in featured|slice:":6" %}
+        <div class="carousel-slide">
+          {% if manga.cover_url %}
+          <img class="carousel-slide-img" src="{{ manga.cover_url }}"
+               alt="{{ manga.title }} cover" loading="{% if forloop.first %}eager{% else %}lazy{% endif %}"
+               referrerpolicy="no-referrer">
+          {% endif %}
+          <div class="carousel-slide-content">
+            <div class="carousel-slide-meta">
+              <span class="status-pill status-{{ manga.status }}">{{ manga.get_status_display }}</span>
+              &nbsp;
+              {% for genre in manga.genres.all|slice:":3" %}<span class="tag">{{ genre.name }}</span> {% endfor %}
+            </div>
+            <div class="carousel-slide-title">{{ manga.title }}</div>
+            <a href="{% url 'manga-detail' manga.mangadex_id %}" class="btn btn-primary">
+              Read Now
+            </a>
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <button class="carousel-btn carousel-btn-prev" aria-label="Previous slide">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      </button>
+      <button class="carousel-btn carousel-btn-next" aria-label="Next slide">
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </button>
+
+      <div class="carousel-dots" role="tablist">
+        {% for manga in featured|slice:":6" %}
+        <button class="carousel-dot {% if forloop.first %}active{% endif %}"
+                role="tab" aria-label="Slide {{ forloop.counter }}"></button>
+        {% endfor %}
+      </div>
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- ── Latest Updates ── -->
+  {% if latest %}
+  <section aria-label="Latest chapter updates">
+    <div class="section-header">
+      <h2 class="section-title">Latest Updates</h2>
+      <a href="{% url 'browse' %}" class="btn btn-ghost btn-sm">View All</a>
+    </div>
+
+    <div class="grid-manga">
+      {% for manga in latest %}
+      <a href="{% url 'manga-detail' manga.mangadex_id %}" class="manga-card">
+        <div class="manga-card-cover">
+          {% if manga.cover_url %}
+          <img src="{{ manga.cover_url }}" alt="{{ manga.title }} cover"
+               loading="lazy" referrerpolicy="no-referrer">
+          {% else %}
+          <div class="skeleton" style="width:100%;height:100%"></div>
+          {% endif %}
+          {% if manga.status %}
+          <span class="manga-card-badge badge-{{ manga.status }}">{{ manga.status }}</span>
+          {% endif %}
+        </div>
+        <div class="manga-card-info">
+          <div class="manga-card-title">{{ manga.title }}</div>
+          {% if manga.last_chapter %}
+          <div class="manga-card-chapter">Ch. {{ manga.last_chapter }}</div>
+          {% endif %}
+          <div class="manga-card-meta">{{ manga.author|truncatechars:30 }}</div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  <!-- Empty state if cache not seeded yet -->
+  {% if not featured and not latest %}
+  <div class="empty-state">
+    <div class="empty-state-icon">
+      <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="1.5" opacity="0.4"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+        <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+    </div>
+    <div class="empty-state-title">No manga yet</div>
+  </div>
+  {% endif %}
+
+</div>
+{% endblock %}

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}Scrollix{% endblock %}</title>
+  <meta name="description" content="{% block meta_description %}Read manga online free — latest chapters, thousands of titles.{% endblock %}">
+  {% load static %}
+  <link rel="icon" type="image/png" href="{% static 'img/logo.png' %}">
+  <link rel="stylesheet" href="{% static 'css/style.css' %}">
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+
+<nav class="navbar" role="navigation" aria-label="Main navigation">
+
+  <!-- ── Top Row: Logo + Search ── -->
+  <div class="navbar-top">
+    <div class="navbar-top-inner">
+      <a href="{% url 'home' %}" class="navbar-brand">
+        <img src="{% static 'img/logo.png' %}" alt="Scrollix" class="navbar-brand-img"
+             onerror="this.style.display='none'">
+      </a>
+
+      <form class="navbar-search" action="{% url 'browse' %}" method="get" role="search">
+        <input type="text" name="q" placeholder="Quick Search…" aria-label="Search manga"
+               value="{{ request.GET.q|default:'' }}">
+        <button type="submit" aria-label="Submit search">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+        </button>
+      </form>
+
+      <!-- Hamburger (mobile) -->
+      <button class="hamburger" aria-label="Toggle menu" aria-expanded="false">
+        <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/>
+          <line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Bottom Row: Nav Links + Auth ── -->
+  <div class="navbar-bottom">
+    <div class="navbar-bottom-inner">
+      <div class="navbar-links">
+        <a href="{% url 'home' %}" {% if request.resolver_match.url_name == 'home' %}class="active"{% endif %}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          Home
+        </a>
+        <a href="{% url 'browse' %}" {% if request.resolver_match.url_name == 'browse' %}class="active"{% endif %}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          Browse
+        </a>
+        {% if user.is_authenticated %}
+        <a href="{% url 'library' %}" {% if request.resolver_match.url_name == 'library' %}class="active"{% endif %}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+          Library
+        </a>
+        {% endif %}
+      </div>
+
+      <div class="navbar-auth">
+        {% if user.is_authenticated %}
+        <div class="navbar-user">
+          <a href="#" class="btn-profile">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            {{ user.username }}
+          </a>
+          <form action="{% url 'logout' %}" method="post" style="display:inline;">
+            {% csrf_token %}
+            <button type="submit" class="btn-logout" aria-label="Logout">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+            </button>
+          </form>
+        </div>
+        {% else %}
+          <a href="{% url 'login' %}" class="btn-nav-login">
+            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+            Login
+          </a>
+          <a href="{% url 'register' %}" class="btn btn-primary btn-sm">Register</a>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Mobile menu -->
+  <div class="nav-mobile-menu" style="display:none">
+    <a href="{% url 'home' %}">Home</a>
+    <a href="{% url 'browse' %}">Browse</a>
+    {% if user.is_authenticated %}
+    <a href="{% url 'library' %}">Library</a>
+    <form method="post" action="{% url 'logout' %}">{% csrf_token %}<button type="submit">Logout</button></form>
+    {% else %}
+    <a href="{% url 'login' %}">Login</a>
+    <a href="{% url 'register' %}">Register</a>
+    {% endif %}
+  </div>
+
+</nav>
+
+{% if messages %}
+<div class="messages">
+  {% for message in messages %}
+  <div class="message message-{{ message.tags }}">{{ message }}</div>
+  {% endfor %}
+</div>
+{% endif %}
+
+<main>
+  {% block content %}{% endblock %}
+</main>
+
+<script src="{% static 'js/main.js' %}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

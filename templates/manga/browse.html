@@ -1,0 +1,204 @@
+{% extends 'base.html' %}
+{% block title %}Scrollix{% endblock %}
+
+{% block content %}
+<div class="adv-search-wrapper">
+
+  <!-- ── Page Header ── -->
+  <div class="adv-search-header container">
+    <h1 class="adv-search-title">
+      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+      </svg>
+      Advanced Search
+    </h1>
+  </div>
+
+  <!-- ── Search + Filter Bar ── -->
+  <div class="adv-searchbar-wrap container">
+    <form class="adv-searchbar browse-filter-form" method="get" action="{% url 'browse' %}">
+
+      <!-- Search input row -->
+      <div class="adv-searchbar-row">
+        <div class="adv-searchbar-input-wrap">
+          <svg class="adv-searchbar-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+               viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          <input id="adv-q" name="q" type="text" class="adv-searchbar-input"
+                 placeholder="Search for series..."
+                 value="{{ request.GET.q|default:'' }}"
+                 autocomplete="off">
+        </div>
+        <button type="button" class="btn btn-ghost adv-filter-toggle" id="adv-filter-toggle">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2">
+            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/>
+          </svg>
+          Filter
+        </button>
+        <button type="submit" class="btn btn-primary adv-search-btn">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+               stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          Search
+        </button>
+      </div>
+
+      <!-- Collapsible filter dropdowns row -->
+      <div class="adv-filter-row" id="adv-filter-row">
+        <!-- Sort -->
+        <div class="adv-dropdown-wrap">
+          <button type="button" class="adv-dropdown-btn" data-target="dd-sort">
+            Sort <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                      fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="adv-dropdown-panel" id="dd-sort">
+            {% for val, label in form.sort.field.choices %}
+            <label class="adv-dropdown-option">
+              <input type="radio" name="sort" value="{{ val }}"
+                     {% if request.GET.sort == val or not request.GET.sort and forloop.first %}checked{% endif %}>
+              {{ label }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Status -->
+        <div class="adv-dropdown-wrap">
+          <button type="button" class="adv-dropdown-btn" data-target="dd-status">
+            Series Status <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                               fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="adv-dropdown-panel" id="dd-status">
+            {% for val, label in form.status.field.choices %}
+            <label class="adv-dropdown-option">
+              <input type="radio" name="status" value="{{ val }}"
+                     {% if request.GET.status == val or not request.GET.status and forloop.first %}checked{% endif %}>
+              {{ label }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
+
+        <!-- Tags / Genres -->
+        <div class="adv-dropdown-wrap">
+          <button type="button" class="adv-dropdown-btn" data-target="dd-tags">
+            Tags <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                      fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="adv-dropdown-panel adv-dropdown-panel-wide" id="dd-tags">
+            <p style="font-size:0.75rem;color:var(--color-muted);margin-bottom:0.6rem">
+              Click once to include <span style="color:#86efac">✓</span>,
+              twice to exclude <span style="color:#fca5a5">✕</span>, again to clear.
+            </p>
+            <div class="genre-grid">
+              {% for genre in genres %}
+              <button type="button" class="tag genre-filter-tag neutral"
+                      data-id="{{ genre.mangadex_id }}">{{ genre.name }}</button>
+              {% endfor %}
+            </div>
+            {{ form.genres_include }}
+            {{ form.genres_exclude }}
+          </div>
+        </div>
+      </div><!-- /.adv-filter-row -->
+
+    </form>
+  </div>
+
+  <!-- ── Results ── -->
+  <div class="container adv-results-wrap">
+
+    {% if manga_list %}
+    <div class="adv-result-grid">
+      {% for manga in manga_list %}
+      <a href="{% url 'manga-detail' manga.mangadex_id %}" class="adv-card">
+        <!-- Cover thumbnail -->
+        <div class="adv-card-cover">
+          {% if manga.cover_url %}
+          <img src="{{ manga.cover_url }}" alt="{{ manga.title }} cover"
+               loading="lazy" referrerpolicy="no-referrer">
+          {% else %}
+          <div class="adv-card-no-cover">
+            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="1.5" opacity="0.35">
+              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+            </svg>
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Info -->
+        <div class="adv-card-info">
+          <div class="adv-card-title">{{ manga.title }}</div>
+          <div class="adv-card-meta-row">
+            {% if manga.year %}<span class="adv-meta-item"><span class="adv-meta-label">Year:</span> {{ manga.year }}</span>{% endif %}
+            {% if manga.status %}<span class="adv-meta-item"><span class="adv-meta-label">Status:</span> {{ manga.get_status_display }}</span>{% endif %}
+            <span class="adv-meta-item"><span class="adv-meta-label">Type:</span> Manga</span>
+          </div>
+          {% if manga.author %}
+          <div class="adv-card-meta-row">
+            <span class="adv-meta-item"><span class="adv-meta-label">Author(s):</span>
+              <span class="adv-card-author">{{ manga.author }}{% if manga.artist and manga.artist != manga.author %}, {{ manga.artist }}{% endif %}</span>
+            </span>
+          </div>
+          {% endif %}
+          {% if manga.genres.all %}
+          <div class="adv-card-tags">
+            <span class="adv-meta-label">Tag(s):</span>
+            {% for genre in manga.genres.all|slice:":8" %}
+            <span class="adv-tag">{{ genre.name }}</span>{% if not forloop.last %},&nbsp;{% endif %}
+            {% endfor %}
+          </div>
+          {% endif %}
+        </div>
+
+        <!-- Last chapter badge -->
+        {% if manga.last_chapter %}
+        <div class="adv-card-ch">Ch.{{ manga.last_chapter }}</div>
+        {% endif %}
+      </a>
+      {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if total_pages > 1 %}
+    <nav class="pagination" aria-label="Page navigation">
+      {% if page > 1 %}
+      <a href="?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&{% endif %}{% endfor %}page={{ page|add:'-1' }}">&lsaquo;</a>
+      {% else %}<span class="disabled">&lsaquo;</span>{% endif %}
+
+      {% for p in page_range %}
+      {% if p == page %}
+      <span class="current">{{ p }}</span>
+      {% else %}
+      <a href="?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&{% endif %}{% endfor %}page={{ p }}">{{ p }}</a>
+      {% endif %}
+      {% endfor %}
+
+      {% if page < total_pages %}
+      <a href="?{% for key, val in request.GET.items %}{% if key != 'page' %}{{ key }}={{ val }}&{% endif %}{% endfor %}page={{ page|add:'1' }}">&rsaquo;</a>
+      {% else %}<span class="disabled">&rsaquo;</span>{% endif %}
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-state-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="1.5" opacity="0.35">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+        </svg>
+      </div>
+      <div class="empty-state-title">No manga found</div>
+      <p style="color:var(--color-muted)">Try a different search term or adjust your filters.</p>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+{% endblock %}
+

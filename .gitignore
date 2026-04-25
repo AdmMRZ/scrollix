@@ -1,0 +1,161 @@
+# ======================
+# OS FILES
+# ======================
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+Icon?
+
+# ======================
+# EDITORS & IDE
+# ======================
+.vscode/
+.idea/
+*.iml
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+*.swo
+*~
+.history/
+
+# ======================
+# LOGS
+# ======================
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ======================
+# ENV / SECRETS
+# ======================
+.env
+.env.*
+*.env
+*.local
+*.secret
+*.key
+*.pem
+*.crt
+
+# ======================
+# DEPENDENCIES
+# ======================
+node_modules/
+vendor/
+bower_components/
+
+# ======================
+# BUILD OUTPUT
+# ======================
+dist/
+build/
+out/
+target/
+bin/
+obj/
+coverage/
+.tmp/
+.temp/
+.cache/
+
+# ======================
+# PACKAGE MANAGERS
+# ======================
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# ======================
+# NODE / JS / TS
+# ======================
+.next/
+.nuxt/
+.svelte-kit/
+.vercel/
+*.tsbuildinfo
+
+# ======================
+# PYTHON
+# ======================
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+env/
+ENV/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# ======================
+# JAVA / KOTLIN
+# ======================
+*.class
+*.jar
+*.war
+*.ear
+.gradle/
+.gradle-cache/
+build/
+
+# ======================
+# GO
+# ======================
+bin/
+pkg/
+
+# ======================
+# C / C++ / CMAKE
+# ======================
+CMakeFiles/
+CMakeCache.txt
+cmake-build-*/
+Makefile
+*.o
+*.out
+*.a
+
+# ======================
+# RUST
+# ======================
+target/
+Cargo.lock
+
+# ======================
+# DATABASE
+# ======================
+*.sqlite
+*.db
+*.db-journal
+
+# ======================
+# TEST / COVERAGE
+# ======================
+coverage/
+*.lcov
+
+# ======================
+# DOCKER
+# ======================
+.dockerignore
+Dockerfile.local
+
+# ======================
+# MISC
+# ======================
+*.bak
+*.tmp
+*.temp
+*.orig
+.agent
+db.sqlite3

@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+{% block title %}{{ manga.title }} — Scrollix{% endblock %}
+{% block meta_description %}Read {{ manga.title }} online free. {{ manga.description|truncatechars:120 }}{% endblock %}
+
+{% block content %}
+{% if not_found %}
+<div class="container" style="padding-top:4rem">
+  <div class="empty-state">
+    <div class="empty-state-title">Manga not found</div>
+    <p style="color:var(--color-muted)">Could not load this manga from MangaDex.</p>
+    <a href="{% url 'browse' %}" class="btn btn-primary" style="margin-top:1rem">Back to Browse</a>
+  </div>
+</div>
+{% else %}
+
+<!-- ── Hero ── -->
+<section class="detail-hero" aria-label="{{ manga.title }} details">
+  {% if manga.cover_url %}
+  <div class="detail-hero-bg" style="background-image:url('{{ manga.cover_url }}')"></div>
+  {% endif %}
+  <div class="container">
+    <div class="detail-hero-content">
+      <div class="detail-cover">
+        {% if manga.cover_url %}
+        <img src="{{ manga.cover_url }}" alt="{{ manga.title }} cover"
+             loading="eager" referrerpolicy="no-referrer">
+        {% endif %}
+      </div>
+      <div class="detail-info">
+        <h1 class="detail-title">{{ manga.title }}</h1>
+        <div class="detail-author">
+          {% if manga.author %}by {{ manga.author }}{% endif %}
+          {% if manga.artist and manga.artist != manga.author %} &amp; {{ manga.artist }}{% endif %}
+          {% if manga.year %}&nbsp;·&nbsp;{{ manga.year }}{% endif %}
+        </div>
+
+        <div class="detail-tags">
+          <span class="status-pill status-{{ manga.status }}">{{ manga.get_status_display }}</span>
+          {% for genre in manga.genres.all|slice:":8" %}
+          <span class="tag">{{ genre.name }}</span>
+          {% endfor %}
+        </div>
+
+        <div class="detail-actions">
+          {% if chapters_page.object_list %}
+          <a href="{% url 'reader' chapters_page.object_list.0.mangadex_id %}" class="btn btn-cta">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Start Reading
+          </a>
+          {% endif %}
+
+          {% if user.is_authenticated %}
+          <button class="bookmark-btn {% if user_bookmark %}bookmarked{% endif %}"
+                  id="bookmark-btn"
+                  data-mangadex-id="{{ manga.mangadex_id }}"
+                  data-list-type="{{ user_bookmark.list_type|default:'reading' }}"
+                  aria-label="Bookmark this manga">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            <span class="btn-label">{% if user_bookmark %}Bookmarked ✓{% else %}Add to List{% endif %}</span>
+          </button>
+          {% else %}
+          <a href="{% url 'login' %}" class="btn btn-ghost">Login to Bookmark</a>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="container" style="padding-bottom:3rem">
+
+  <!-- ── Synopsis ── -->
+  {% if manga.description %}
+  <section style="margin-bottom:2rem" aria-label="Synopsis">
+    <div class="section-header"><h2 class="section-title">Synopsis</h2></div>
+    <p class="synopsis-text">{{ manga.description }}</p>
+    <span class="synopsis-toggle" role="button" tabindex="0">Show more</span>
+  </section>
+  {% endif %}
+
+  <!-- ── Chapter List ── -->
+  <section aria-label="Chapter list">
+    <div class="section-header">
+      <h2 class="section-title">Chapters <small style="font-size:0.85rem;font-family:var(--font-body);font-weight:400;color:var(--color-muted)">({{ chapter_count }})</small></h2>
+    </div>
+
+    {% if chapters_page.object_list %}
+    <div class="chapter-list">
+      {% for chapter in chapters_page.object_list %}
+      <a href="{% url 'reader' chapter.mangadex_id %}" class="chapter-item"
+         aria-label="{{ chapter.display_number }}{% if chapter.title %}: {{ chapter.title }}{% endif %}">
+        <span class="chapter-item-num">{{ chapter.display_number }}</span>
+        {% if chapter.title %}
+        <span class="chapter-item-title">{{ chapter.title }}</span>
+        {% else %}
+        <span class="chapter-item-title"></span>
+        {% endif %}
+        <span class="chapter-item-meta">
+          {{ chapter.published_at|date:"M j, Y"|default:"—" }}
+        </span>
+      </a>
+      {% endfor %}
+    </div>
+
+    <!-- Chapter pagination -->
+    {% if chapters_page.has_other_pages %}
+    <nav class="pagination" aria-label="Chapter pagination">
+      {% if chapters_page.has_previous %}
+      <a href="?ch_page={{ chapters_page.previous_page_number }}">&lsaquo;</a>
+      {% endif %}
+      <span class="current">{{ chapters_page.number }} / {{ chapters_page.paginator.num_pages }}</span>
+      {% if chapters_page.has_next %}
+      <a href="?ch_page={{ chapters_page.next_page_number }}">&rsaquo;</a>
+      {% endif %}
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-state-title">No chapters available</div>
+      <p style="color:var(--color-muted)">English chapters may not be available for this title.</p>
+    </div>
+    {% endif %}
+  </section>
+
+</div>
+{% endif %}
+{% endblock %}

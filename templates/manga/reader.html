@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}{{ chapter.display_number }} — {{ manga.title }} — Scrollix{% endblock %}
+
+{% block content %}
+{% if not_found %}
+<div class="container" style="padding-top:4rem">
+  <div class="empty-state">
+    <div class="empty-state-title">Chapter not found</div>
+    <p style="color:var(--color-muted)">This chapter could not be loaded from MangaDex.</p>
+    <a href="{% url 'browse' %}" class="btn btn-primary" style="margin-top:1rem">Back to Browse</a>
+  </div>
+</div>
+{% else %}
+
+<div class="reader-wrapper">
+
+  <!-- ── Top Bar ── -->
+  <div class="reader-topbar">
+    <a href="{% url 'manga-detail' manga.mangadex_id %}" class="btn btn-ghost btn-sm" aria-label="Back to manga details">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+    </a>
+    <span class="reader-topbar-title">{{ manga.title }} &mdash; {{ chapter.display_number }}{% if chapter.title %}: {{ chapter.title }}{% endif %}</span>
+    <span style="font-size:0.8rem;color:var(--color-muted);white-space:nowrap">{{ page_count }} pages</span>
+  </div>
+
+  <!-- ── Page Images ── -->
+  <div class="reader-container" id="reader-container">
+    {% for page_url in pages %}
+    <div class="page-wrapper">
+      <img
+        src="{{ page_url }}"
+        alt="Page {{ forloop.counter }} of {{ page_count }}"
+        loading="{% if forloop.first %}eager{% else %}lazy{% endif %}"
+        referrerpolicy="no-referrer"
+        decoding="async"
+        class="manga-page"
+      >
+    </div>
+    {% empty %}
+    <div class="empty-state" style="padding:6rem 1rem">
+      <div class="empty-state-title">No pages available</div>
+      <p style="color:var(--color-muted)">MangaDex did not return image data for this chapter.</p>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- ── Bottom Navigation ── -->
+  <nav class="reader-nav" aria-label="Chapter navigation">
+    {% if prev_chapter %}
+    <a href="{% url 'reader' prev_chapter.mangadex_id %}" class="btn btn-ghost">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      Prev
+    </a>
+    {% else %}
+    <span class="btn btn-ghost" style="opacity:0.4;cursor:not-allowed">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      Prev
+    </span>
+    {% endif %}
+
+    <a href="{% url 'manga-detail' manga.mangadex_id %}" class="btn btn-ghost">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      Chapters
+    </a>
+
+    {% if next_chapter %}
+    <a href="{% url 'reader' next_chapter.mangadex_id %}" class="btn btn-primary">
+      Next
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+    </a>
+    {% else %}
+    <a href="{% url 'manga-detail' manga.mangadex_id %}" class="btn btn-cta">Finished! Back to Details</a>
+    {% endif %}
+  </nav>
+
+</div>
+
+<!-- ── Progress Indicator ── -->
+<div class="reader-progress" aria-live="polite" aria-label="Reading progress">1 / {{ page_count }}</div>
+
+{% endif %}
+{% endblock %}
