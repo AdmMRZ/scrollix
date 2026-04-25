@@ -3,8 +3,12 @@ from django.contrib.auth import login
 from django.views.generic import CreateView, TemplateView
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
+from django.utils.decorators import method_decorator
+from django_ratelimit.decorators import ratelimit
 from .forms import RegisterForm
 from manga import selectors
+
+@method_decorator(ratelimit(key='ip', rate='5/m', method='POST', block=True), name='dispatch')
 class RegisterView(CreateView):
     form_class = RegisterForm
     template_name = 'accounts/register.html'
@@ -13,8 +17,11 @@ class RegisterView(CreateView):
         response = super().form_valid(form)
         login(self.request, self.object)
         return response
+
+@method_decorator(ratelimit(key='ip', rate='5/m', method='POST', block=True), name='dispatch')
 class CustomLoginView(LoginView):
     template_name = 'accounts/login.html'
+
 class CustomLogoutView(LogoutView):
     pass
 class LibraryView(LoginRequiredMixin, TemplateView):

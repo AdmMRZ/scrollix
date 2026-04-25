@@ -5,7 +5,6 @@ from django_ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
 from . import services, selectors
 from .forms import SearchForm
-from .models import CachedManga, CachedChapter
 PAGE_SIZE = 24
 class HomeView(TemplateView):
     template_name = 'manga/home.html'
