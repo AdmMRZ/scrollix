@@ -27,6 +27,7 @@ def search_manga_in_cache(
     genre_include_ids: list[str] | None = None,
     genre_exclude_ids: list[str] | None = None,
     status: str = '',
+    manga_type: str = '',
     sort: str = '-cached_at',
 ) -> QuerySet:
     qs = CachedManga.objects.prefetch_related('genres').all()
@@ -34,6 +35,10 @@ def search_manga_in_cache(
         qs = qs.filter(title__icontains=query)
     if status:
         qs = qs.filter(status=status)
+    if manga_type:
+        type_map = {'ja': 'Manga', 'ko': 'Manhwa', 'zh': 'Manhua'}
+        if manga_type in type_map:
+            qs = qs.filter(custom_type=type_map[manga_type])
     if genre_include_ids:
         for gid in genre_include_ids:
             qs = qs.filter(genres__mangadex_id=gid)

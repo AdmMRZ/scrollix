@@ -70,6 +70,22 @@
             {% endfor %}
           </div>
         </div>
+
+        <div class="adv-dropdown-wrap">
+          <button type="button" class="adv-dropdown-btn" data-target="dd-manga_type">
+            Type <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+                               fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="adv-dropdown-panel" id="dd-manga_type">
+            {% for val, label in form.manga_type.field.choices %}
+            <label class="adv-dropdown-option">
+              <input type="radio" name="manga_type" value="{{ val }}"
+                     {% if request.GET.manga_type == val or not request.GET.manga_type and forloop.first %}checked{% endif %}>
+              {{ label }}
+            </label>
+            {% endfor %}
+          </div>
+        </div>
         <div class="adv-dropdown-wrap">
           <button type="button" class="adv-dropdown-btn" data-target="dd-tags">
             Tags <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
@@ -116,7 +132,7 @@
           <div class="adv-card-meta-row">
             {% if manga.year %}<span class="adv-meta-item"><span class="adv-meta-label">Year:</span> {{ manga.year }}</span>{% endif %}
             {% if manga.status %}<span class="adv-meta-item"><span class="adv-meta-label">Status:</span> {{ manga.get_status_display }}</span>{% endif %}
-            <span class="adv-meta-item"><span class="adv-meta-label">Type:</span> Manga</span>
+              <span class="adv-meta-item"><span class="adv-meta-label">Type:</span> {{ manga.custom_type|default:"Comic" }}</span>
           </div>
           {% if manga.author %}
           <div class="adv-card-meta-row">

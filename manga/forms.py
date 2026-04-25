@@ -19,6 +19,15 @@ class SearchForm(forms.Form):
             ('cancelled', 'Cancelled'),
         ],
     )
+    manga_type = forms.ChoiceField(
+        required=False,
+        choices=[
+            ('', 'Any Type'),
+            ('ja', 'Manga'),
+            ('ko', 'Manhwa'),
+            ('zh', 'Manhua'),
+        ],
+    )
     sort = forms.ChoiceField(
         required=False,
         choices=[

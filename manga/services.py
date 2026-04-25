@@ -9,6 +9,9 @@ from django.utils import timezone
 from django.utils.text import slugify
 from .models import CachedManga, CachedChapter, Genre, Bookmark, ReadHistory
 from . import selectors
+from django.core.cache import cache
+from django.utils.dateparse import parse_datetime
+
 logger = logging.getLogger(__name__)
 MANGADEX_BASE = settings.MANGADEX_API_BASE
 REQUEST_TIMEOUT = 10
@@ -90,6 +93,7 @@ def fetch_chapter_pages(chapter_id: str) -> dict | None:
 def fetch_tags() -> list[dict]:
     data = _api_get('/manga/tag')
     return data.get('data', []) if data else []
+
 def fetch_popular_manga(limit: int = 20) -> list[dict]:
     return fetch_manga_list({
         'order[followedCount]': 'desc',
@@ -106,7 +110,6 @@ def fetch_latest_manga(limit: int = 24) -> list[dict]:
         'includes[]': ['cover_art', 'author'],
         'contentRating[]': ['safe', 'suggestive'],
         'availableTranslatedLanguage[]': 'en',
-        'status[]': ['ongoing', 'hiatus'],
     })
 
 def build_page_urls(at_home: dict, quality: str = 'data', use_proxy: bool = None) -> list[str]:
@@ -154,6 +157,16 @@ def _save_manga_to_cache(manga_data: dict, stats: dict = None) -> CachedManga:
     if stats and mangadex_id in stats:
         follow_count = stats[mangadex_id].get('follows', 0)
 
+    lang = attrs.get('originalLanguage', '')
+    if lang == 'ja':
+        custom_type = 'Manga'
+    elif lang == 'ko':
+        custom_type = 'Manhwa'
+    elif 'zh' in lang:
+        custom_type = 'Manhua'
+    else:
+        custom_type = 'Manga'
+
     titles = attrs.get('title', {})
     title = titles.get('en')
     if not title:
@@ -191,6 +204,7 @@ def _save_manga_to_cache(manga_data: dict, stats: dict = None) -> CachedManga:
             'author': author[:300],
             'artist': artist[:300],
             'status': attrs.get('status', '')[:20],
+            'custom_type': custom_type,
             'cover_url': _parse_cover_url(manga_data),
             'year': attrs.get('year'),
             'content_rating': attrs.get('contentRating', '')[:30],
@@ -226,7 +240,6 @@ def _save_chapters_to_cache(
         published_str = attrs.get('publishAt') or attrs.get('createdAt')
         published_at = None
         if published_str:
-            from django.utils.dateparse import parse_datetime
             published_at = parse_datetime(published_str)
         CachedChapter.objects.update_or_create(
             mangadex_id=chapter_id,
@@ -279,27 +292,33 @@ def get_reader_data(chapter_id: str) -> dict | None:
     }
 
 def get_homepage_data() -> dict:
-    featured_qs = selectors.get_popular_manga(limit=6)
-    latest_qs = selectors.get_latest_updated_manga(limit=24)
-    featured_stale = not featured_qs.exists() or featured_qs.first().is_stale()
-    latest_stale = not latest_qs.exists() or latest_qs.first().is_stale()
-    if featured_stale:
+    featured_ids = cache.get('home_featured_ids')
+    latest_ids = cache.get('home_latest_ids')
+
+    if not featured_ids:
         raw_popular = fetch_popular_manga(limit=6)
-        m_ids = [m['id'] for m in raw_popular]
-        stats = fetch_manga_statistics(m_ids)
+        featured_ids = [m['id'] for m in raw_popular]
+        stats = fetch_manga_statistics(featured_ids)
         for m in raw_popular:
             _save_manga_to_cache(m, stats=stats)
-        featured_qs = selectors.get_popular_manga(limit=6)
+        cache.set('home_featured_ids', featured_ids, getattr(settings, 'CACHE_TTL_MANGA', 86400))
 
-    if latest_stale:
+    if not latest_ids:
         raw_latest = fetch_latest_manga(limit=24)
+        latest_ids = [m['id'] for m in raw_latest]
         for m in raw_latest:
             _save_manga_to_cache(m)
-        latest_qs = selectors.get_latest_updated_manga(limit=24)
-        
+        cache.set('home_latest_ids', latest_ids, getattr(settings, 'CACHE_TTL_MANGA', 86400))
+
+    def _order_qs(ids):
+        if not ids: return []
+        qs = CachedManga.objects.prefetch_related('genres').filter(mangadex_id__in=ids)
+        mangas = {m.mangadex_id: m for m in qs}
+        return [mangas[i] for i in ids if i in mangas]
+
     return {
-        'featured': list(featured_qs),
-        'latest': list(latest_qs),
+        'featured': _order_qs(featured_ids),
+        'latest': _order_qs(latest_ids),
     }
 
 def search_manga(
@@ -307,6 +326,7 @@ def search_manga(
     genre_include: list[str] | None = None,
     genre_exclude: list[str] | None = None,
     status: str = '',
+    manga_type: str = '',
     sort: str = 'latest',
     page: int = 1,
     page_size: int = 24,
@@ -322,6 +342,8 @@ def search_manga(
         params['title'] = query
     if status:
         params['status[]'] = status
+    if manga_type:
+        params['originalLanguage[]'] = [manga_type]
     sort_map = {
         'latest': ('latestUploadedChapter', 'desc'),
         'popular': ('followedCount', 'desc'),
@@ -338,7 +360,7 @@ def search_manga(
     data = _api_get('/manga', params=params)
     if not data:
         qs = selectors.search_manga_in_cache(query, genre_include, genre_exclude,
-                                              status, sort)
+                                              status, manga_type, sort)
         total = qs.count()
         start = (page - 1) * page_size
         return list(qs[start:start + page_size]), total

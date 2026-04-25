@@ -23,6 +23,7 @@ class CachedManga(models.Model):
     author = models.CharField(max_length=300, blank=True)
     artist = models.CharField(max_length=300, blank=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, blank=True)
+    custom_type = models.CharField(max_length=50, blank=True)
     cover_url = models.URLField(max_length=1000, blank=True)
     genres = models.ManyToManyField(Genre, blank=True, related_name='manga')
     year = models.IntegerField(null=True, blank=True)

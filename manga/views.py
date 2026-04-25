@@ -33,6 +33,7 @@ class BrowseView(TemplateView):
                 genre_include=cd['genres_include'],
                 genre_exclude=cd['genres_exclude'],
                 status=cd['status'],
+                manga_type=cd.get('manga_type'),
                 sort=cd['sort'] or 'latest',
                 page=page,
                 page_size=PAGE_SIZE,

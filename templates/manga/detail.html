@@ -32,6 +32,9 @@
         </div>
         <div class="detail-tags">
           <span class="status-pill status-{{ manga.status }}">{{ manga.get_status_display }}</span>
+          {% if manga.custom_type %}
+          <span class="tag" style="background-color: var(--color-accent); color: #0f111a; font-weight: bold;">{{ manga.custom_type }}</span>
+          {% endif %}
           {% for genre in manga.genres.all|slice:":8" %}
           <span class="tag">{{ genre.name }}</span>
           {% endfor %}
