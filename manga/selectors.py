@@ -49,23 +49,20 @@ def search_manga_in_cache(
     }
     qs = qs.order_by(valid_sorts.get(sort, '-cached_at'))
     return qs.distinct()
-def get_chapters_for_manga(
-    manga: CachedManga, language: str = 'en'
-) -> list[CachedChapter]:
-    chapters_list = list(manga.chapters.filter(language=language).order_by('-published_at'))
+
+def get_chapters_for_manga(manga: CachedManga, language: str = 'en') -> list[CachedChapter]:
+    chapters_qs = manga.chapters.filter(language=language).order_by('chapter_number')
+    
     seen = set()
     deduped = []
-    for ch in chapters_list:
+    for ch in chapters_qs:
         if ch.chapter_number not in seen:
             seen.add(ch.chapter_number)
             deduped.append(ch)
-    def sort_key(ch):
-        try:
-            return float(ch.chapter_number)
-        except (ValueError, TypeError):
-            return 0.0
-    deduped.sort(key=sort_key)
+    
+    deduped.sort(key=lambda x: float(x.chapter_number) if x.chapter_number.replace('.', '', 1).isdigit() else 0)
     return deduped
+    
 def get_chapter_by_mangadex_id(chapter_id: str) -> Optional[CachedChapter]:
     try:
         return CachedChapter.objects.select_related('manga').get(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 import logging
 import time
+import urllib.parse
 from typing import Optional
 import requests
 from django.conf import settings
@@ -14,6 +15,7 @@ REQUEST_TIMEOUT = 10
 REQUEST_HEADERS = {
     'User-Agent': 'Scrollix/1.0 (personal manga reader; contact via github)',
 }
+
 def _api_get(path: str, params: dict = None) -> dict | None:
     url = f"{MANGADEX_BASE}{path}"
     try:
@@ -38,6 +40,7 @@ def fetch_manga_detail(mangadex_id: str) -> dict | None:
         'includes[]': ['author', 'artist', 'cover_art'],
     })
     return data.get('data') if data else None
+    
 def fetch_manga_list(params: dict) -> list[dict]:
     data = _api_get('/manga', params=params)
     return data.get('data', []) if data else []
@@ -62,17 +65,28 @@ def fetch_chapter_feed(mangadex_id: str, language: str = 'en') -> list[dict]:
         if offset >= total:
             break
     return chapters
+
 def fetch_chapter_pages(chapter_id: str) -> dict | None:
     data = _api_get(f"/at-home/server/{chapter_id}")
     if not data:
+        logger.error("fetch_chapter_pages: no data returned for chapter %s", chapter_id)
         return None
     chapter_data = data.get('chapter', {})
+    pages = chapter_data.get('data', [])
+    pages_saver = chapter_data.get('dataSaver', [])
+    base_url = data.get('baseUrl', '')
+    hash_ = chapter_data.get('hash', '')
+    logger.info(
+        "fetch_chapter_pages: chapter=%s base_url=%s hash=%s pages=%d saver=%d",
+        chapter_id, base_url, hash_, len(pages), len(pages_saver)
+    )
     return {
-        'base_url': data.get('baseUrl', ''),
-        'hash': chapter_data.get('hash', ''),
-        'pages': chapter_data.get('data', []),
-        'pages_saver': chapter_data.get('dataSaver', []),
+        'base_url': base_url,
+        'hash': hash_,
+        'pages': pages,
+        'pages_saver': pages_saver,
     }
+
 def fetch_tags() -> list[dict]:
     data = _api_get('/manga/tag')
     return data.get('data', []) if data else []
@@ -84,6 +98,7 @@ def fetch_popular_manga(limit: int = 20) -> list[dict]:
         'contentRating[]': ['safe', 'suggestive'],
         'availableTranslatedLanguage[]': 'en',
     })
+
 def fetch_latest_manga(limit: int = 24) -> list[dict]:
     return fetch_manga_list({
         'order[latestUploadedChapter]': 'desc',
@@ -91,40 +106,67 @@ def fetch_latest_manga(limit: int = 24) -> list[dict]:
         'includes[]': ['cover_art', 'author'],
         'contentRating[]': ['safe', 'suggestive'],
         'availableTranslatedLanguage[]': 'en',
+        'status[]': ['ongoing', 'hiatus'],
     })
-def build_page_urls(at_home: dict, quality: str = 'data') -> list[str]:
+
+def build_page_urls(at_home: dict, quality: str = 'data', use_proxy: bool = None) -> list[str]:
+    if use_proxy is None:
+        use_proxy = getattr(settings, 'USE_IMAGE_PROXY', False)
+    
     base = at_home['base_url']
     hash_ = at_home['hash']
-    if quality == 'data-saver' and not at_home.get('pages_saver'):
-        quality = 'data'
-    files = at_home['pages_saver'] if quality == 'data-saver' else at_home['pages']
-    quality_path = 'data-saver' if quality == 'data-saver' else 'data'
-    return [f"{base}/{quality_path}/{hash_}/{f}" for f in files]
+    if quality == 'data-saver':
+        files = at_home.get('pages_saver') or at_home.get('pages', [])
+        quality_path = 'data-saver' if at_home.get('pages_saver') else 'data'
+    else:
+        files = at_home.get('pages', [])
+        quality_path = 'data'
+    direct_urls = [f"{base}/{quality_path}/{hash_}/{f}" for f in files]
+    if use_proxy:
+        return [
+            f"/api/img-proxy/?url={urllib.parse.quote(u, safe='')}"
+            for u in direct_urls
+        ]
+    return direct_urls
+
 def _parse_cover_url(manga_data: dict) -> str:
     mangadex_id = manga_data.get('id', '')
     for rel in manga_data.get('relationships', []):
         if rel.get('type') == 'cover_art':
             filename = rel.get('attributes', {}).get('fileName', '')
             if filename:
-                return (
-                    f"https://uploads.mangadex.org/covers/"
-                    f"{mangadex_id}/{filename}.256.jpg"
-                )
+                return f"https://uploads.mangadex.org/covers/{mangadex_id}/{filename}.256.jpg"
     return ''
-def _parse_author(manga_data: dict, role: str = 'author') -> str:
-    for rel in manga_data.get('relationships', []):
-        if rel.get('type') == rel.get('type') and rel.get('type') == role:
-            return rel.get('attributes', {}).get('name', '')
-    return ''
-def _save_manga_to_cache(manga_data: dict) -> CachedManga:
+
+def fetch_manga_statistics(mangadex_ids: list[str]) -> dict:
+    if not mangadex_ids:
+        return {}
+    data = _api_get('/statistics/manga', params={'manga[]': mangadex_ids})
+    if not data:
+        return {}
+    return data.get('statistics', {})
+
+def _save_manga_to_cache(manga_data: dict, stats: dict = None) -> CachedManga:
     attrs = manga_data.get('attributes', {})
     mangadex_id = manga_data.get('id', '')
+    
+    follow_count = 0
+    if stats and mangadex_id in stats:
+        follow_count = stats[mangadex_id].get('follows', 0)
+
     titles = attrs.get('title', {})
-    title = (
-        titles.get('en') or
-        titles.get('ja-ro') or
-        next(iter(titles.values()), 'Unknown')
-    )
+    title = titles.get('en')
+    if not title:
+        for alt in attrs.get('altTitles', []):
+            if 'en' in alt:
+                title = alt['en']
+                break
+    if not title:
+        title = (
+            titles.get('ja-ro') or 
+            titles.get('ja') or
+            next(iter(titles.values()), 'Unknown')
+        )
     alt_titles = []
     for alt in attrs.get('altTitles', []):
         for lang, val in alt.items():
@@ -135,10 +177,11 @@ def _save_manga_to_cache(manga_data: dict) -> CachedManga:
     author = ''
     artist = ''
     for rel in manga_data.get('relationships', []):
+        name = rel.get('attributes', {}).get('name', '')
         if rel.get('type') == 'author' and not author:
-            author = rel.get('attributes', {}).get('name', '') or ''
-        if rel.get('type') == 'artist' and not artist:
-            artist = rel.get('attributes', {}).get('name', '') or ''
+            author = name
+        elif rel.get('type') == 'artist' and not artist:
+            artist = name
     manga, _ = CachedManga.objects.update_or_create(
         mangadex_id=mangadex_id,
         defaults={
@@ -152,6 +195,7 @@ def _save_manga_to_cache(manga_data: dict) -> CachedManga:
             'year': attrs.get('year'),
             'content_rating': attrs.get('contentRating', '')[:30],
             'last_chapter': str(attrs.get('lastChapter') or '')[:20],
+            'follow_count': follow_count,
         },
     )
     tag_ids = []
@@ -215,37 +259,49 @@ def get_or_fetch_chapters(manga: CachedManga, language: str = 'en') -> list:
 def get_reader_data(chapter_id: str) -> dict | None:
     chapter = selectors.get_chapter_by_mangadex_id(chapter_id)
     if chapter is None:
+        logger.warning("get_reader_data: chapter %s not in cache", chapter_id)
         return None
     at_home = fetch_chapter_pages(chapter_id)
     if not at_home:
         return None
     pages = build_page_urls(at_home, quality='data-saver')
+    if not pages:
+        logger.warning("get_reader_data: 0 pages built for chapter %s", chapter_id)
     adjacent = selectors.get_adjacent_chapters(chapter)
     return {
         'manga': chapter.manga,
         'chapter': chapter,
         'pages': pages,
+        'at_home_base': at_home.get('base_url', ''),
         'prev_chapter': adjacent['prev'],
         'next_chapter': adjacent['next'],
         'page_count': len(pages),
     }
+
 def get_homepage_data() -> dict:
-    featured_qs = selectors.get_popular_manga(limit=8)
+    featured_qs = selectors.get_popular_manga(limit=6)
     latest_qs = selectors.get_latest_updated_manga(limit=24)
-    if not featured_qs.exists():
-        raw_popular = fetch_popular_manga(limit=8)
+    featured_stale = not featured_qs.exists() or featured_qs.first().is_stale()
+    latest_stale = not latest_qs.exists() or latest_qs.first().is_stale()
+    if featured_stale:
+        raw_popular = fetch_popular_manga(limit=6)
+        m_ids = [m['id'] for m in raw_popular]
+        stats = fetch_manga_statistics(m_ids)
         for m in raw_popular:
-            _save_manga_to_cache(m)
-        featured_qs = selectors.get_popular_manga(limit=8)
-    if not latest_qs.exists():
+            _save_manga_to_cache(m, stats=stats)
+        featured_qs = selectors.get_popular_manga(limit=6)
+
+    if latest_stale:
         raw_latest = fetch_latest_manga(limit=24)
         for m in raw_latest:
             _save_manga_to_cache(m)
         latest_qs = selectors.get_latest_updated_manga(limit=24)
+        
     return {
         'featured': list(featured_qs),
         'latest': list(latest_qs),
     }
+
 def search_manga(
     query: str = '',
     genre_include: list[str] | None = None,

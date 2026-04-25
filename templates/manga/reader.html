@@ -54,10 +54,8 @@
         src="{{ page_url }}"
         alt="Page {{ forloop.counter }} of {{ page_count }}"
         loading="{% if forloop.first %}eager{% else %}lazy{% endif %}"
-        referrerpolicy="no-referrer"
         decoding="async"
         class="manga-page"
-        onerror="if (!this.dataset.fallbackApplied) { this.dataset.fallbackApplied = 'true'; this.src = this.src.replace('/data-saver/', '/data/'); }"
       >
     </div>
     {% empty %}

@@ -33,7 +33,6 @@ class CachedManga(models.Model):
     class Meta:
         ordering = ['-cached_at']
         indexes = [
-            models.Index(fields=['mangadex_id']),
             models.Index(fields=['status']),
             models.Index(fields=['cached_at']),
             models.Index(fields=['follow_count']),
