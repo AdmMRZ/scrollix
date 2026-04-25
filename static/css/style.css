@@ -84,7 +84,7 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
   flex-shrink: 0;
 }
 .navbar-brand-img {
-  height: 85px; width: auto; object-fit: contain;
+  height: 120px; width: auto; object-fit: contain;
   display: block;
 }
 

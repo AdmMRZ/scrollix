@@ -6,7 +6,7 @@
   <title>{% block title %}Scrollix{% endblock %}</title>
   <meta name="description" content="{% block meta_description %}Read manga online free — latest chapters, thousands of titles.{% endblock %}">
   {% load static %}
-  <link rel="icon" type="image/png" href="{% static 'img/logo.png' %}">
+  <link rel="icon" type="image/png" href="{% static 'img/logo.png' %}?v=2">
   <link rel="stylesheet" href="{% static 'css/style.css' %}">
   {% block extra_head %}{% endblock %}
 </head>
@@ -18,7 +18,7 @@
   <div class="navbar-top">
     <div class="navbar-top-inner">
       <a href="{% url 'home' %}" class="navbar-brand">
-        <img src="{% static 'img/logo.png' %}" alt="Scrollix" class="navbar-brand-img"
+        <img src="{% static 'img/long_logo.png' %}" alt="Scrollix" class="navbar-brand-img"
              onerror="this.style.display='none'">
       </a>
 
