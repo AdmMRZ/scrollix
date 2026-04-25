@@ -5,38 +5,25 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.urls import reverse_lazy
 from .forms import RegisterForm
 from manga import selectors
-
-
 class RegisterView(CreateView):
     form_class = RegisterForm
     template_name = 'accounts/register.html'
     success_url = reverse_lazy('home')
-
     def form_valid(self, form):
         response = super().form_valid(form)
         login(self.request, self.object)
         return response
-
-
 class CustomLoginView(LoginView):
     template_name = 'accounts/login.html'
-
-
 class CustomLogoutView(LogoutView):
     pass
-
-
 class LibraryView(LoginRequiredMixin, TemplateView):
-    """User library: bookmarks by list type + read history."""
     template_name = 'accounts/library.html'
-
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
         user = self.request.user
         active_tab = self.request.GET.get('tab', 'reading')
-
         list_types = ['reading', 'plan_to_read', 'completed', 'on_hold', 'dropped']
-
         if active_tab == 'history':
             ctx['history'] = selectors.get_user_read_history(user, limit=100)
         elif active_tab in list_types:
@@ -44,8 +31,6 @@ class LibraryView(LoginRequiredMixin, TemplateView):
         else:
             active_tab = 'reading'
             ctx['bookmarks'] = selectors.get_user_bookmarks(user, list_type='reading')
-
-        # Counts for tab badges
         ctx['counts'] = {
             lt: selectors.get_user_bookmarks(user, list_type=lt).count()
             for lt in list_types

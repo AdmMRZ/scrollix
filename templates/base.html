@@ -11,17 +11,13 @@
   {% block extra_head %}{% endblock %}
 </head>
 <body>
-
 <nav class="navbar" role="navigation" aria-label="Main navigation">
-
-  <!-- ── Top Row: Logo + Search ── -->
   <div class="navbar-top">
     <div class="navbar-top-inner">
       <a href="{% url 'home' %}" class="navbar-brand">
         <img src="{% static 'img/long_logo.png' %}" alt="Scrollix" class="navbar-brand-img"
              onerror="this.style.display='none'">
       </a>
-
       <form class="navbar-search" action="{% url 'browse' %}" method="get" role="search">
         <input type="text" name="q" placeholder="Quick Search…" aria-label="Search manga"
                value="{{ request.GET.q|default:'' }}">
@@ -32,8 +28,6 @@
           </svg>
         </button>
       </form>
-
-      <!-- Hamburger (mobile) -->
       <button class="hamburger" aria-label="Toggle menu" aria-expanded="false">
         <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/>
@@ -42,8 +36,6 @@
       </button>
     </div>
   </div>
-
-  <!-- ── Bottom Row: Nav Links + Auth ── -->
   <div class="navbar-bottom">
     <div class="navbar-bottom-inner">
       <div class="navbar-links">
@@ -62,7 +54,6 @@
         </a>
         {% endif %}
       </div>
-
       <div class="navbar-auth">
         {% if user.is_authenticated %}
         <div class="navbar-user">
@@ -87,8 +78,6 @@
       </div>
     </div>
   </div>
-
-  <!-- Mobile menu -->
   <div class="nav-mobile-menu" style="display:none">
     <a href="{% url 'home' %}">Home</a>
     <a href="{% url 'browse' %}">Browse</a>
@@ -100,9 +89,7 @@
     <a href="{% url 'register' %}">Register</a>
     {% endif %}
   </div>
-
 </nav>
-
 {% if messages %}
 <div class="messages">
   {% for message in messages %}
@@ -110,11 +97,9 @@
   {% endfor %}
 </div>
 {% endif %}
-
 <main>
   {% block content %}{% endblock %}
 </main>
-
 <script src="{% static 'js/main.js' %}"></script>
 {% block extra_js %}{% endblock %}
 </body>

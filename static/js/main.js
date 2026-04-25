@@ -1,32 +1,24 @@
-/* ── Carousel ── */
 (function () {
   const track = document.querySelector('.carousel-track');
   if (!track) return;
   const slides = track.querySelectorAll('.carousel-slide');
   const dots = document.querySelectorAll('.carousel-dot');
   let current = 0, timer;
-
   function goTo(n) {
     current = (n + slides.length) % slides.length;
     track.style.transform = `translateX(-${current * 100}%)`;
     dots.forEach((d, i) => d.classList.toggle('active', i === current));
   }
-
   function next() { goTo(current + 1); }
-
   document.querySelector('.carousel-btn-prev')?.addEventListener('click', () => { goTo(current - 1); resetTimer(); });
   document.querySelector('.carousel-btn-next')?.addEventListener('click', () => { next(); resetTimer(); });
   dots.forEach((d, i) => d.addEventListener('click', () => { goTo(i); resetTimer(); }));
-
   function resetTimer() { clearInterval(timer); timer = setInterval(next, 5000); }
-
   if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     timer = setInterval(next, 5000);
   }
   goTo(0);
 })();
-
-/* ── Mobile Nav ── */
 (function () {
   const hamburger = document.querySelector('.hamburger');
   const menu = document.querySelector('.nav-mobile-menu');
@@ -37,8 +29,6 @@
     hamburger.setAttribute('aria-expanded', isOpen);
   });
 })();
-
-/* ── Synopsis expand/collapse ── */
 (function () {
   const text = document.querySelector('.synopsis-text');
   const toggle = document.querySelector('.synopsis-toggle');
@@ -54,7 +44,6 @@
     toggle.textContent = expanded ? 'Show less' : 'Show more';
   });
 })();
-
 (function () {
   const bookmarkSelect = document.getElementById('bookmark-select');
   if (bookmarkSelect) {
@@ -63,7 +52,6 @@
       const listType = bookmarkSelect.value;
       const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value
                      || document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
-
       bookmarkSelect.disabled = true;
       try {
         const res = await fetch('/api/bookmark/', {
@@ -74,11 +62,8 @@
           },
           body: JSON.stringify({ mangadex_id: mangadexId, list_type: listType })
         });
-
         if (!res.ok) throw new Error('Network error');
-        
         const data = await res.json();
-        
         if (data.action === 'removed') {
           bookmarkSelect.classList.remove('is-bookmarked');
         } else {
@@ -93,24 +78,18 @@
     });
   }
 })();
-
-/* ── Reader progress indicator ── */
 (function () {
   const progress = document.querySelector('.reader-progress');
   const pages = document.querySelectorAll('.page-wrapper');
   if (!progress || !pages.length) return;
-
   const io = new IntersectionObserver(entries => {
     let visible = 0;
     entries.forEach(e => { if (e.isIntersecting) visible = parseInt(e.target.dataset.page); });
     if (visible) progress.textContent = `${visible} / ${pages.length}`;
   }, { threshold: 0.5 });
-
   pages.forEach((p, i) => { p.dataset.page = i + 1; io.observe(p); });
 })();
-
 (function () {
-  /* Dropdown toggles */
   document.querySelectorAll('.adv-dropdown-btn').forEach(btn => {
     btn.addEventListener('click', e => {
       e.stopPropagation();
@@ -124,24 +103,18 @@
       }
     });
   });
-
-  /* Close dropdowns on outside click */
   document.addEventListener('click', e => {
     if (!e.target.closest('.adv-dropdown-wrap')) {
       document.querySelectorAll('.adv-dropdown-panel').forEach(p => p.classList.remove('open'));
       document.querySelectorAll('.adv-dropdown-btn').forEach(b => b.classList.remove('active'));
     }
   });
-
-  /* Filter row toggle */
   const filterToggle = document.getElementById('adv-filter-toggle');
   const filterRow = document.getElementById('adv-filter-row');
   filterToggle?.addEventListener('click', () => {
     filterRow.classList.toggle('open');
     filterToggle.classList.toggle('active');
   });
-
-  /* Genre tag cycling: neutral → include → exclude → neutral */
   const state = {};
   document.querySelectorAll('.genre-filter-tag').forEach(tag => {
     tag.addEventListener('click', () => {
@@ -153,8 +126,6 @@
       );
     });
   });
-
-  /* Inject genre values on form submit */
   document.querySelector('.browse-filter-form')?.addEventListener('submit', () => {
     const inc = Object.entries(state).filter(([, v]) => v === 'include').map(([k]) => k);
     const exc = Object.entries(state).filter(([, v]) => v === 'exclude').map(([k]) => k);

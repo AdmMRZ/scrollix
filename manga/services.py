@@ -1,37 +1,20 @@
-"""
-Service layer — all business logic and MangaDex API interactions live here.
-Views call services; services call selectors for DB access.
-"""
 from __future__ import annotations
 import logging
 import time
 from typing import Optional
-
 import requests
 from django.conf import settings
 from django.utils import timezone
 from django.utils.text import slugify
-
 from .models import CachedManga, CachedChapter, Genre, Bookmark, ReadHistory
 from . import selectors
-
 logger = logging.getLogger(__name__)
-
 MANGADEX_BASE = settings.MANGADEX_API_BASE
 REQUEST_TIMEOUT = 10
 REQUEST_HEADERS = {
     'User-Agent': 'Scrollix/1.0 (personal manga reader; contact via github)',
 }
-
-
-# ─── MangaDex API Client ──────────────────────────────────────────────────────
-
 def _api_get(path: str, params: dict = None) -> dict | None:
-    """
-    Low-level GET request to MangaDex API.
-    Returns parsed JSON or None on failure.
-    Respects MangaDex rate limit: 5 req/s.
-    """
     url = f"{MANGADEX_BASE}{path}"
     try:
         response = requests.get(
@@ -50,31 +33,18 @@ def _api_get(path: str, params: dict = None) -> dict | None:
     except requests.RequestException as exc:
         logger.error("MangaDex API error for %s: %s", path, exc)
         return None
-
-
 def fetch_manga_detail(mangadex_id: str) -> dict | None:
-    """GET /manga/{id} — fetch full metadata for one manga."""
     data = _api_get(f"/manga/{mangadex_id}", params={
         'includes[]': ['author', 'artist', 'cover_art'],
     })
     return data.get('data') if data else None
-
-
 def fetch_manga_list(params: dict) -> list[dict]:
-    """GET /manga — search/browse MangaDex."""
     data = _api_get('/manga', params=params)
     return data.get('data', []) if data else []
-
-
 def fetch_chapter_feed(mangadex_id: str, language: str = 'en') -> list[dict]:
-    """
-    GET /manga/{id}/feed — all chapters for a manga.
-    Paginates automatically (MangaDex max 500/page).
-    """
     chapters = []
     offset = 0
     limit = 500
-
     while True:
         data = _api_get(f"/manga/{mangadex_id}/feed", params={
             'translatedLanguage[]': language,
@@ -85,28 +55,17 @@ def fetch_chapter_feed(mangadex_id: str, language: str = 'en') -> list[dict]:
         })
         if not data:
             break
-
         batch = data.get('data', [])
         chapters.extend(batch)
-
         total = data.get('total', 0)
         offset += limit
         if offset >= total:
             break
-
     return chapters
-
-
 def fetch_chapter_pages(chapter_id: str) -> dict | None:
-    """
-    GET /at-home/server/{chapterId} — get image server info.
-    Returns {'base_url': ..., 'hash': ..., 'pages': [...], 'pages_saver': [...]}
-    Note: URLs are time-limited (~15 min). Never cache this in DB.
-    """
     data = _api_get(f"/at-home/server/{chapter_id}")
     if not data:
         return None
-
     chapter_data = data.get('chapter', {})
     return {
         'base_url': data.get('baseUrl', ''),
@@ -114,16 +73,10 @@ def fetch_chapter_pages(chapter_id: str) -> dict | None:
         'pages': chapter_data.get('data', []),
         'pages_saver': chapter_data.get('dataSaver', []),
     }
-
-
 def fetch_tags() -> list[dict]:
-    """GET /manga/tag — retrieve all MangaDex tags/genres."""
     data = _api_get('/manga/tag')
     return data.get('data', []) if data else []
-
-
 def fetch_popular_manga(limit: int = 20) -> list[dict]:
-    """Manga sorted by follower count desc."""
     return fetch_manga_list({
         'order[followedCount]': 'desc',
         'limit': limit,
@@ -131,10 +84,7 @@ def fetch_popular_manga(limit: int = 20) -> list[dict]:
         'contentRating[]': ['safe', 'suggestive'],
         'availableTranslatedLanguage[]': 'en',
     })
-
-
 def fetch_latest_manga(limit: int = 24) -> list[dict]:
-    """Manga sorted by latest uploaded chapter desc."""
     return fetch_manga_list({
         'order[latestUploadedChapter]': 'desc',
         'limit': limit,
@@ -142,21 +92,14 @@ def fetch_latest_manga(limit: int = 24) -> list[dict]:
         'contentRating[]': ['safe', 'suggestive'],
         'availableTranslatedLanguage[]': 'en',
     })
-
-
-# ─── Image URL Builder ────────────────────────────────────────────────────────
-
 def build_page_urls(at_home: dict, quality: str = 'data') -> list[str]:
     base = at_home['base_url']
     hash_ = at_home['hash']
-    
     if quality == 'data-saver' and not at_home.get('pages_saver'):
         quality = 'data'
-
     files = at_home['pages_saver'] if quality == 'data-saver' else at_home['pages']
     quality_path = 'data-saver' if quality == 'data-saver' else 'data'
     return [f"{base}/{quality_path}/{hash_}/{f}" for f in files]
-
 def _parse_cover_url(manga_data: dict) -> str:
     mangadex_id = manga_data.get('id', '')
     for rel in manga_data.get('relationships', []):
@@ -168,38 +111,27 @@ def _parse_cover_url(manga_data: dict) -> str:
                     f"{mangadex_id}/{filename}.256.jpg"
                 )
     return ''
-
-
 def _parse_author(manga_data: dict, role: str = 'author') -> str:
     for rel in manga_data.get('relationships', []):
         if rel.get('type') == rel.get('type') and rel.get('type') == role:
             return rel.get('attributes', {}).get('name', '')
     return ''
-
-
 def _save_manga_to_cache(manga_data: dict) -> CachedManga:
     attrs = manga_data.get('attributes', {})
     mangadex_id = manga_data.get('id', '')
-
     titles = attrs.get('title', {})
     title = (
         titles.get('en') or
         titles.get('ja-ro') or
         next(iter(titles.values()), 'Unknown')
     )
-
-    # Alt titles
     alt_titles = []
     for alt in attrs.get('altTitles', []):
         for lang, val in alt.items():
             if val and val != title:
                 alt_titles.append(val)
-
-    # Description
     desc = attrs.get('description', {})
     description = desc.get('en', '') or next(iter(desc.values()), '')
-
-    # Author / Artist
     author = ''
     artist = ''
     for rel in manga_data.get('relationships', []):
@@ -207,7 +139,6 @@ def _save_manga_to_cache(manga_data: dict) -> CachedManga:
             author = rel.get('attributes', {}).get('name', '') or ''
         if rel.get('type') == 'artist' and not artist:
             artist = rel.get('attributes', {}).get('name', '') or ''
-
     manga, _ = CachedManga.objects.update_or_create(
         mangadex_id=mangadex_id,
         defaults={
@@ -223,8 +154,6 @@ def _save_manga_to_cache(manga_data: dict) -> CachedManga:
             'last_chapter': str(attrs.get('lastChapter') or '')[:20],
         },
     )
-
-    # Genres / tags
     tag_ids = []
     for tag in attrs.get('tags', []):
         tag_id = tag.get('id', '')
@@ -236,32 +165,25 @@ def _save_manga_to_cache(manga_data: dict) -> CachedManga:
             )
             tag_ids.append(genre.pk)
     manga.genres.set(tag_ids)
-
     return manga
-
-
 def _save_chapters_to_cache(
     manga: CachedManga, chapters_data: list[dict]
 ) -> None:
-    """Bulk upsert chapter data into CachedChapter."""
     for ch in chapters_data:
         attrs = ch.get('attributes', {})
         chapter_id = ch.get('id', '')
         if not chapter_id:
             continue
-
         scanlation = ''
         for rel in ch.get('relationships', []):
             if rel.get('type') == 'scanlation_group':
                 scanlation = rel.get('attributes', {}).get('name', '') or ''
                 break
-
         published_str = attrs.get('publishAt') or attrs.get('createdAt')
         published_at = None
         if published_str:
             from django.utils.dateparse import parse_datetime
             published_at = parse_datetime(published_str)
-
         CachedChapter.objects.update_or_create(
             mangadex_id=chapter_id,
             defaults={
@@ -275,60 +197,30 @@ def _save_chapters_to_cache(
                 'scanlation_group': scanlation[:300],
             },
         )
-
-
-# ─── High-Level Services ──────────────────────────────────────────────────────
-
 def get_or_fetch_manga(mangadex_id: str) -> CachedManga | None:
-    """
-    Return manga from local cache if fresh.
-    Otherwise fetch from MangaDex API, update cache, return.
-    """
     manga = selectors.get_manga_by_mangadex_id(mangadex_id)
-
     if manga is None or manga.is_stale():
         raw = fetch_manga_detail(mangadex_id)
         if raw:
             manga = _save_manga_to_cache(raw)
         elif manga is None:
             return None
-
     return manga
-
-
 def get_or_fetch_chapters(manga: CachedManga, language: str = 'en') -> list:
-    """
-    Return cached chapters if fresh, else re-fetch from API.
-    Returns list of CachedChapter objects ordered ascending.
-    """
     if selectors.chapters_are_stale(manga):
         chapters_data = fetch_chapter_feed(manga.mangadex_id, language)
         if chapters_data:
             _save_chapters_to_cache(manga, chapters_data)
-
     return list(selectors.get_chapters_for_manga(manga, language))
-
-
 def get_reader_data(chapter_id: str) -> dict | None:
-    """
-    Build everything the reader page needs:
-    - chapter metadata
-    - page image URLs (fresh, never cached)
-    - prev/next chapter navigation
-    """
     chapter = selectors.get_chapter_by_mangadex_id(chapter_id)
     if chapter is None:
-        # Try fetching the manga if chapter is missing
         return None
-
-    # Always fetch fresh image URLs from at-home server
     at_home = fetch_chapter_pages(chapter_id)
     if not at_home:
         return None
-
     pages = build_page_urls(at_home, quality='data-saver')
     adjacent = selectors.get_adjacent_chapters(chapter)
-
     return {
         'manga': chapter.manga,
         'chapter': chapter,
@@ -337,36 +229,23 @@ def get_reader_data(chapter_id: str) -> dict | None:
         'next_chapter': adjacent['next'],
         'page_count': len(pages),
     }
-
-
 def get_homepage_data() -> dict:
-    """
-    Return data for the homepage:
-    - featured: popular manga (from cache or API refresh)
-    - latest: recently updated manga
-    """
     featured_qs = selectors.get_popular_manga(limit=8)
     latest_qs = selectors.get_latest_updated_manga(limit=24)
-
-    # If cache is empty, bootstrap from API
     if not featured_qs.exists():
         raw_popular = fetch_popular_manga(limit=8)
         for m in raw_popular:
             _save_manga_to_cache(m)
         featured_qs = selectors.get_popular_manga(limit=8)
-
     if not latest_qs.exists():
         raw_latest = fetch_latest_manga(limit=24)
         for m in raw_latest:
             _save_manga_to_cache(m)
         latest_qs = selectors.get_latest_updated_manga(limit=24)
-
     return {
         'featured': list(featured_qs),
         'latest': list(latest_qs),
     }
-
-
 def search_manga(
     query: str = '',
     genre_include: list[str] | None = None,
@@ -376,10 +255,6 @@ def search_manga(
     page: int = 1,
     page_size: int = 24,
 ) -> tuple[list, int]:
-    """
-    Search manga via MangaDex API, cache results, return page.
-    Returns (manga_list, total_count).
-    """
     params: dict = {
         'limit': page_size,
         'offset': (page - 1) * page_size,
@@ -387,13 +262,10 @@ def search_manga(
         'contentRating[]': ['safe', 'suggestive'],
         'availableTranslatedLanguage[]': 'en',
     }
-
     if query:
         params['title'] = query
-
     if status:
         params['status[]'] = status
-
     sort_map = {
         'latest': ('latestUploadedChapter', 'desc'),
         'popular': ('followedCount', 'desc'),
@@ -403,79 +275,46 @@ def search_manga(
     }
     order_field, order_dir = sort_map.get(sort, ('latestUploadedChapter', 'desc'))
     params[f'order[{order_field}]'] = order_dir
-
     if genre_include:
         params['includedTags[]'] = genre_include
-
     if genre_exclude:
         params['excludedTags[]'] = genre_exclude
-
     data = _api_get('/manga', params=params)
     if not data:
-        # Fallback to cache
         qs = selectors.search_manga_in_cache(query, genre_include, genre_exclude,
                                               status, sort)
         total = qs.count()
         start = (page - 1) * page_size
         return list(qs[start:start + page_size]), total
-
     results = data.get('data', [])
     total = data.get('total', len(results))
-
     manga_list = []
     for m in results:
         cached = _save_manga_to_cache(m)
         manga_list.append(cached)
-
     return manga_list, total
-
-
-# ─── Bookmark Services ────────────────────────────────────────────────────────
-
 def toggle_bookmark(user, manga: CachedManga, list_type: str = 'reading') -> dict:
-    """
-    Create bookmark if not exists; update list_type if exists;
-    delete if list_type is empty.
-    Returns {'action': 'added'|'updated'|'removed', 'bookmark': obj|None}
-    """
     existing = selectors.get_user_bookmark(user, manga)
-
     if not list_type:
         if existing:
             existing.delete()
         return {'action': 'removed', 'bookmark': None}
-
     if existing is None:
         bookmark = Bookmark.objects.create(user=user, manga=manga, list_type=list_type)
         return {'action': 'added', 'bookmark': bookmark}
-
     if existing.list_type != list_type:
         existing.list_type = list_type
         existing.save(update_fields=['list_type', 'updated_at'])
         return {'action': 'updated', 'bookmark': existing}
-
     return {'action': 'unchanged', 'bookmark': existing}
-
-
-# ─── Read History Services ────────────────────────────────────────────────────
-
 def record_read(user, chapter: CachedChapter) -> ReadHistory:
-    """Mark a chapter as read for authenticated user."""
     obj, _ = ReadHistory.objects.update_or_create(
         user=user,
         chapter=chapter,
         defaults={'manga': chapter.manga},
     )
     return obj
-
-
-# ─── Genre Seed ───────────────────────────────────────────────────────────────
-
 def seed_genres_from_api() -> int:
-    """
-    Fetch all tags from MangaDex and populate the Genre table.
-    Returns number of genres created/updated.
-    """
     tags = fetch_tags()
     count = 0
     for tag in tags:

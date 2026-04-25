@@ -1,6 +1,5 @@
 {% extends 'base.html' %}
 {% block title %}{{ chapter.display_number }} — {{ manga.title }} — Scrollix{% endblock %}
-
 {% block content %}
 {% if not_found %}
 <div class="container" style="padding-top:4rem">
@@ -11,10 +10,7 @@
   </div>
 </div>
 {% else %}
-
 <div class="reader-wrapper">
-
-  <!-- ── Top Bar ── -->
   <div class="reader-topbar" style="display: flex; justify-content: space-between; align-items: center; gap: 1rem;">
     <div style="display: flex; align-items: center; gap: 1rem; overflow: hidden;">
       <a href="{% url 'manga-detail' manga.mangadex_id %}" class="btn btn-ghost btn-sm" aria-label="Back to manga details" style="flex-shrink: 0;">
@@ -25,7 +21,6 @@
         {{ manga.title }} &mdash; {{ chapter.display_number }}{% if chapter.title %}: {{ chapter.title }}{% endif %}
       </span>
     </div>
-
     <div style="display: flex; gap: 0.5rem; align-items: center; flex-shrink: 0;">
       {% if prev_chapter %}
       <a href="{% url 'reader' prev_chapter.mangadex_id %}" class="btn btn-ghost btn-sm">
@@ -40,9 +35,7 @@
         Prev
       </span>
       {% endif %}
-
       <span style="font-size:0.8rem;color:var(--color-muted);white-space:nowrap;margin:0 0.5rem" class="hide-mobile">{{ page_count }} pages</span>
-
       {% if next_chapter %}
       <a href="{% url 'reader' next_chapter.mangadex_id %}" class="btn btn-primary btn-sm">
         Next
@@ -54,8 +47,6 @@
       {% endif %}
     </div>
   </div>
-
-  <!-- ── Page Images ── -->
   <div class="reader-container" id="reader-container">
     {% for page_url in pages %}
     <div class="page-wrapper">
@@ -76,8 +67,6 @@
     </div>
     {% endfor %}
   </div>
-
-  <!-- ── Bottom Navigation ── -->
   <nav class="reader-nav" aria-label="Chapter navigation">
     {% if prev_chapter %}
     <a href="{% url 'reader' prev_chapter.mangadex_id %}" class="btn btn-ghost">
@@ -92,13 +81,11 @@
       Prev
     </span>
     {% endif %}
-
     <a href="{% url 'manga-detail' manga.mangadex_id %}" class="btn btn-ghost">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
            stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
       Chapters
     </a>
-
     {% if next_chapter %}
     <a href="{% url 'reader' next_chapter.mangadex_id %}" class="btn btn-primary">
       Next
@@ -109,11 +96,7 @@
     <a href="{% url 'manga-detail' manga.mangadex_id %}" class="btn btn-cta">Finished! Back to Details</a>
     {% endif %}
   </nav>
-
 </div>
-
-<!-- ── Progress Indicator ── -->
 <div class="reader-progress" aria-live="polite" aria-label="Reading progress">1 / {{ page_count }}</div>
-
 {% endif %}
 {% endblock %}

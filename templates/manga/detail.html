@@ -1,7 +1,6 @@
 {% extends 'base.html' %}
 {% block title %}{{ manga.title }} — Scrollix{% endblock %}
 {% block meta_description %}Read {{ manga.title }} online free. {{ manga.description|truncatechars:120 }}{% endblock %}
-
 {% block content %}
 {% if not_found %}
 <div class="container" style="padding-top:4rem">
@@ -12,8 +11,6 @@
   </div>
 </div>
 {% else %}
-
-<!-- ── Hero ── -->
 <section class="detail-hero" aria-label="{{ manga.title }} details">
   {% if manga.cover_url %}
   <div class="detail-hero-bg" style="background-image:url('{{ manga.cover_url }}')"></div>
@@ -33,14 +30,12 @@
           {% if manga.artist and manga.artist != manga.author %} &amp; {{ manga.artist }}{% endif %}
           {% if manga.year %}&nbsp;·&nbsp;{{ manga.year }}{% endif %}
         </div>
-
         <div class="detail-tags">
           <span class="status-pill status-{{ manga.status }}">{{ manga.get_status_display }}</span>
           {% for genre in manga.genres.all|slice:":8" %}
           <span class="tag">{{ genre.name }}</span>
           {% endfor %}
         </div>
-
         <div class="detail-actions">
           {% if chapters_page.object_list %}
           <a href="{% url 'reader' chapters_page.object_list.0.mangadex_id %}" class="btn btn-cta">
@@ -49,7 +44,6 @@
             Start Reading
           </a>
           {% endif %}
-
           {% if user.is_authenticated %}
           {% csrf_token %}
           <div class="bookmark-control">
@@ -68,10 +62,7 @@
     </div>
   </div>
 </section>
-
 <div class="container" style="padding-bottom:3rem">
-
-  <!-- ── Synopsis ── -->
   {% if manga.description %}
   <section style="margin-bottom:2rem" aria-label="Synopsis">
     <div class="section-header"><h2 class="section-title">Synopsis</h2></div>
@@ -79,13 +70,10 @@
     <span class="synopsis-toggle" role="button" tabindex="0">Show more</span>
   </section>
   {% endif %}
-
-  <!-- ── Chapter List ── -->
   <section aria-label="Chapter list">
     <div class="section-header">
       <h2 class="section-title">Chapters <small style="font-size:0.85rem;font-family:var(--font-body);font-weight:400;color:var(--color-muted)">({{ chapter_count }})</small></h2>
     </div>
-
     {% if chapters_page.object_list %}
     <div class="chapter-list">
       {% for chapter in chapters_page.object_list %}
@@ -103,8 +91,6 @@
       </a>
       {% endfor %}
     </div>
-
-    <!-- Chapter pagination -->
     {% if chapters_page.has_other_pages %}
     <nav class="pagination" aria-label="Chapter pagination">
       {% if chapters_page.has_previous %}
@@ -116,7 +102,6 @@
       {% endif %}
     </nav>
     {% endif %}
-
     {% else %}
     <div class="empty-state">
       <div class="empty-state-title">No chapters available</div>
@@ -124,7 +109,6 @@
     </div>
     {% endif %}
   </section>
-
 </div>
 {% endif %}
 {% endblock %}

@@ -1,9 +1,4 @@
-/* ═══════════════════════════════════════════════════
-   Scrollix Design System — Dark OLED Manga Theme
-   ═══════════════════════════════════════════════════ */
 @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;700&family=Noto+Serif+JP:wght@400;500;600;700&display=swap');
-
-/* ─── Tokens ─────────────────────────────────────── */
 :root {
   --bg-primary:       #0F0F23;
   --bg-surface:       #1a1a2e;
@@ -27,8 +22,6 @@
   --transition:       all 0.2s ease;
   --glow:             0 0 20px rgba(67,56,202,0.3);
 }
-
-/* ─── Reset ──────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; color-scheme: dark; }
 body {
@@ -42,19 +35,13 @@ a { color: inherit; text-decoration: none; }
 img { max-width: 100%; height: auto; display: block; }
 ul { list-style: none; }
 button { cursor: pointer; font-family: inherit; border: none; background: none; }
-
-/* ─── Scrollbar ──────────────────────────────────── */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg-primary); }
 ::-webkit-scrollbar-thumb { background: var(--color-accent); border-radius: 3px; }
-
-/* ─── Typography ─────────────────────────────────── */
 h1,h2,h3,h4,h5 { font-family: var(--font-heading); font-weight: 600; line-height: 1.3; }
 h1 { font-size: clamp(1.8rem, 4vw, 2.8rem); }
 h2 { font-size: clamp(1.4rem, 3vw, 2rem); }
 h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
-
-/* ─── Layout ─────────────────────────────────────── */
 .container { max-width: 1280px; margin: 0 auto; padding: 0 1.5rem; }
 .grid-manga {
   display: grid;
@@ -63,8 +50,6 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
 }
 @media (min-width: 640px)  { .grid-manga { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); } }
 @media (min-width: 1024px) { .grid-manga { grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); } }
-
-/* ─── Navbar ─────────────────────────────────────── */
 .navbar {
   position: sticky; top: 0; z-index: 100;
   background: rgba(15,15,35,0.98);
@@ -72,8 +57,6 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--color-border);
 }
-
-/* Top row */
 .navbar-top { padding: 0.75rem 0; }
 .navbar-top-inner {
   display: flex; align-items: center; gap: 1.5rem;
@@ -87,8 +70,6 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
   height: 120px; width: auto; object-fit: contain;
   display: block;
 }
-
-/* Search bar in top row */
 .navbar-search {
   flex: 1; max-width: 360px; margin-left: auto;
   display: flex; align-items: center;
@@ -107,8 +88,6 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
   flex-shrink: 0; transition: var(--transition);
 }
 .navbar-search button:hover { color: var(--color-text); }
-
-/* Bottom row */
 .navbar-bottom {
   border-top: 1px solid var(--color-border);
   background: rgba(10,10,28,0.9);
@@ -128,8 +107,6 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
 .navbar-links a:hover { color: var(--color-text); background: rgba(255,255,255,0.04); }
 .navbar-links a.active { color: var(--color-text); border-bottom-color: var(--color-accent); }
 .navbar-auth { display: flex; align-items: center; gap: 0.5rem; }
-
-/* Profile pill */
 .navbar-user {
   display: flex; align-items: center; gap: 0;
   background: var(--bg-surface);
@@ -154,8 +131,6 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
   transition: var(--transition);
 }
 .btn-logout:hover { background: rgba(239,68,68,0.15); color: #f87171; }
-
-/* Login link in bottom bar */
 .btn-nav-login {
   display: inline-flex; align-items: center; gap: 0.4rem;
   padding: 0.35rem 0.9rem;
@@ -163,8 +138,6 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
   font-weight: 600; transition: var(--transition);
 }
 .btn-nav-login:hover { color: #fff; }
-
-/* Hamburger */
 .hamburger { display: none; padding: 0.5rem; color: var(--color-text); margin-left: 0.5rem; }
 @media (max-width: 768px) {
   .hamburger { display: flex; align-items: center; }
@@ -178,8 +151,6 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
   }
   .hide-mobile { display: none !important; }
 }
-
-/* ─── Buttons ─────────────────────────────────────── */
 .btn {
   display: inline-flex; align-items: center; gap: 0.4rem;
   padding: 0.5rem 1.1rem; border-radius: var(--radius-sm);
@@ -200,8 +171,6 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
 }
 .btn-ghost:hover { color: var(--color-text); border-color: var(--color-accent); }
 .btn-sm { padding: 0.35rem 0.75rem; font-size: 0.8rem; }
-
-/* ─── Cards ──────────────────────────────────────── */
 .manga-card {
   background: var(--bg-surface);
   border: 1px solid var(--color-border);
@@ -241,8 +210,6 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
 }
 .manga-card-meta { font-size: 0.75rem; color: var(--color-muted); }
 .manga-card-chapter { font-size: 0.75rem; color: var(--color-accent); margin-top: 0.2rem; }
-
-/* ─── Skeleton ────────────────────────────────────── */
 .skeleton {
   background: linear-gradient(90deg, var(--bg-surface) 25%, var(--bg-surface-2) 50%, var(--bg-surface) 75%);
   background-size: 200% 100%;
@@ -254,8 +221,6 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
   100% { background-position: -200% 0; }
 }
 .skeleton-card { height: 300px; border-radius: var(--radius); }
-
-/* ─── Tags / Genres ──────────────────────────────── */
 .tag {
   display: inline-flex; align-items: center;
   padding: 0.2rem 0.6rem; border-radius: 100px;
@@ -269,8 +234,6 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
 .tag.exclude { background: rgba(239,68,68,0.15); color: #fca5a5; border-color: rgba(239,68,68,0.3); cursor: pointer; }
 .tag.neutral { cursor: pointer; }
 .tag.neutral:hover { border-color: var(--color-accent); }
-
-/* ─── Forms ──────────────────────────────────────── */
 .form-group { margin-bottom: 1.25rem; }
 .form-label { display: block; font-size: 0.875rem; color: var(--color-muted); margin-bottom: 0.4rem; }
 .form-input, .form-select {
@@ -289,8 +252,6 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
 }
 .form-select option { background: var(--bg-surface); color: var(--color-text); }
 .form-error { font-size: 0.8rem; color: #f87171; margin-top: 0.3rem; }
-
-/* ─── Carousel / Hero ────────────────────────────── */
 .hero-carousel { position: relative; overflow: hidden; border-radius: var(--radius-lg); margin-bottom: 3rem; }
 .carousel-track { display: flex; transition: transform 0.5s ease; }
 .carousel-slide {
@@ -328,8 +289,6 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
 .carousel-btn:hover { background: var(--color-accent); }
 .carousel-btn-prev { left: 1rem; }
 .carousel-btn-next { right: 1rem; }
-
-/* ─── Section Headers ────────────────────────────── */
 .section-header {
   display: flex; align-items: center; justify-content: space-between;
   margin-bottom: 1.25rem; padding-bottom: 0.75rem;
@@ -344,8 +303,6 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
   width: 4px; height: 1.2em; background: var(--color-accent);
   border-radius: 2px;
 }
-
-/* ─── Chapter List ───────────────────────────────── */
 .chapter-list { display: flex; flex-direction: column; gap: 0.25rem; }
 .chapter-item {
   display: flex; align-items: center; justify-content: space-between;
@@ -358,8 +315,6 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
 .chapter-item-title { font-size: 0.85rem; color: var(--color-muted); flex: 1; margin: 0 1rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .chapter-item-meta { font-size: 0.75rem; color: var(--color-muted); white-space: nowrap; }
 .chapter-item.read .chapter-item-num { color: var(--color-muted); }
-
-/* ─── Reader ─────────────────────────────────────── */
 .reader-wrapper { background: #0a0a0a; min-height: 100vh; }
 .reader-topbar {
   position: sticky; top: 0; z-index: 50;
@@ -387,8 +342,6 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
   font-size: 0.8rem; color: var(--color-muted);
   backdrop-filter: blur(8px);
 }
-
-/* ─── Manga Detail Hero ──────────────────────────── */
 .detail-hero {
   position: relative; border-radius: var(--radius-lg);
   overflow: hidden; margin-bottom: 2rem;
@@ -425,12 +378,8 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
 .status-completed { background: rgba(59,130,246,0.15); color: #93c5fd; }
 .status-hiatus    { background: rgba(234,179,8,0.15);  color: #fde047; }
 .status-cancelled { background: rgba(239,68,68,0.15);  color: #fca5a5; }
-
-/* ─── Synopsis ───────────────────────────────────── */
 .synopsis-text { color: var(--color-muted); font-size: 0.9rem; line-height: 1.7; }
 .synopsis-toggle { color: var(--color-accent); font-size: 0.85rem; cursor: pointer; margin-top: 0.5rem; }
-
-/* ─── Bookmark Button ────────────────────────────── */
 .bookmark-btn {
   display: inline-flex; align-items: center; gap: 0.5rem;
   padding: 0.5rem 1.1rem; border-radius: var(--radius-sm);
@@ -440,8 +389,6 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
 }
 .bookmark-btn:hover { background: var(--color-accent); color: #fff; }
 .bookmark-btn.bookmarked { background: var(--color-accent); color: #fff; }
-
-/* ─── Pagination ─────────────────────────────────── */
 .pagination {
   display: flex; align-items: center; justify-content: center;
   gap: 0.4rem; padding: 2rem 0;
@@ -455,8 +402,6 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
 .pagination a:hover { border-color: var(--color-accent); color: var(--color-accent); }
 .pagination span.current { background: var(--color-accent); border-color: var(--color-accent); }
 .pagination .disabled { opacity: 0.4; pointer-events: none; }
-
-/* ─── Library Tabs ───────────────────────────────── */
 .lib-tabs {
   display: flex; gap: 0.25rem; margin-bottom: 2rem;
   border-bottom: 1px solid var(--color-border); overflow-x: auto; padding-bottom: 0;
@@ -474,8 +419,6 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
   background: var(--color-accent-dim); color: var(--color-accent);
   font-size: 0.7rem; font-weight: 600; padding: 0 4px; margin-left: 0.3rem;
 }
-
-/* ─── Auth Pages ─────────────────────────────────── */
 .auth-wrapper {
   min-height: 100vh; display: flex; align-items: center; justify-content: center;
   padding: 2rem 1rem;
@@ -487,8 +430,6 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
 }
 .auth-title { font-size: 1.6rem; margin-bottom: 0.25rem; }
 .auth-subtitle { color: var(--color-muted); font-size: 0.9rem; margin-bottom: 1.75rem; }
-
-/* ─── Alerts / Messages ──────────────────────────── */
 .messages { padding: 0.75rem 1.5rem; }
 .message {
   padding: 0.75rem 1rem; border-radius: var(--radius-sm);
@@ -497,8 +438,6 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
 .message-error   { background: rgba(239,68,68,0.1);  border: 1px solid rgba(239,68,68,0.3);  color: #fca5a5; }
 .message-success { background: rgba(34,197,94,0.1);  border: 1px solid rgba(34,197,94,0.3);  color: #86efac; }
 .message-info    { background: rgba(59,130,246,0.1); border: 1px solid rgba(59,130,246,0.3); color: #93c5fd; }
-
-/* ─── Glass Panel ────────────────────────────────── */
 .glass-panel {
   background: var(--glass-bg);
   backdrop-filter: blur(12px);
@@ -506,23 +445,17 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
   border: 1px solid var(--glass-border);
   border-radius: var(--radius);
 }
-
-/* ─── Empty State ────────────────────────────────── */
 .empty-state {
   text-align: center; padding: 4rem 1rem;
   color: var(--color-muted);
 }
 .empty-state-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.4; }
 .empty-state-title { font-size: 1.2rem; color: var(--color-text); margin-bottom: 0.5rem; }
-
-/* ─── Footer ─────────────────────────────────────── */
 .footer {
   border-top: 1px solid var(--color-border);
   padding: 2rem 0; margin-top: 4rem;
   color: var(--color-muted); font-size: 0.85rem; text-align: center;
 }
-
-/* ─── Accessibility ──────────────────────────────── */
 :focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
@@ -530,17 +463,12 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
-
-/* ─── Browse Filters — Advanced Search Style ─────── */
 .adv-search-wrapper { padding-bottom: 3rem; }
-
 .adv-search-header { padding-top: 2rem; padding-bottom: 1.25rem; }
 .adv-search-title {
   display: flex; align-items: center; gap: 0.6rem;
   font-size: clamp(1.4rem, 3vw, 1.9rem);
 }
-
-/* Search bar */
 .adv-searchbar-wrap {
   margin-bottom: 0;
   background: var(--bg-surface);
@@ -568,16 +496,12 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
 .adv-search-btn { white-space: nowrap; }
 .adv-filter-toggle { white-space: nowrap; }
 .adv-filter-toggle.active { border-color: var(--color-accent); color: var(--color-accent); }
-
-/* Filter row (dropdowns) */
 .adv-filter-row {
   display: none; flex-wrap: wrap; gap: 0.5rem;
   margin-top: 0.75rem; padding-top: 0.75rem;
   border-top: 1px solid var(--color-border);
 }
 .adv-filter-row.open { display: flex; }
-
-/* Dropdown */
 .adv-dropdown-wrap { position: relative; }
 .adv-dropdown-btn {
   display: inline-flex; align-items: center; gap: 0.35rem;
@@ -605,8 +529,6 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
 }
 .adv-dropdown-option:hover { background: var(--bg-hover); }
 .adv-dropdown-option input[type="radio"] { accent-color: var(--color-accent); }
-
-/* Result grid */
 .adv-results-wrap { margin-top: 1.5rem; }
 .adv-result-grid {
   display: grid;
@@ -614,8 +536,6 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
   gap: 0.75rem;
 }
 @media (max-width: 700px) { .adv-result-grid { grid-template-columns: 1fr; } }
-
-/* List card */
 .adv-card {
   display: flex; gap: 0.85rem; align-items: flex-start;
   background: var(--bg-surface); border: 1px solid var(--color-border);
@@ -656,8 +576,6 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
   background: var(--color-accent-dim); color: #a5b4fc;
   padding: 0.15rem 0.45rem; border-radius: 4px;
 }
-
-/* Navbar logo image */
 .navbar-logo {
   display: flex; align-items: center; gap: 0.5rem;
   font-family: var(--font-heading);
@@ -667,4 +585,3 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
 .navbar-logo-img { height: 68px; width: auto; object-fit: contain; }
 .navbar-logo-text { line-height: 1; }
 .navbar-logo-accent { color: var(--color-accent); }
-

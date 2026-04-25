@@ -1,10 +1,7 @@
 {% extends 'base.html' %}
 {% block title %}Scrollix{% endblock %}
-
 {% block content %}
 <div class="container" style="padding-top:2rem">
-
-  <!-- ── Hero Carousel ── -->
   {% if featured %}
   <section aria-label="Featured manga">
     <div class="hero-carousel">
@@ -30,7 +27,6 @@
         </div>
         {% endfor %}
       </div>
-
       <button class="carousel-btn carousel-btn-prev" aria-label="Previous slide">
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
@@ -39,7 +35,6 @@
         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none"
              stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
       </button>
-
       <div class="carousel-dots" role="tablist">
         {% for manga in featured|slice:":6" %}
         <button class="carousel-dot {% if forloop.first %}active{% endif %}"
@@ -49,15 +44,12 @@
     </div>
   </section>
   {% endif %}
-
-  <!-- ── Latest Updates ── -->
   {% if latest %}
   <section aria-label="Latest chapter updates">
     <div class="section-header">
       <h2 class="section-title">Latest Updates</h2>
       <a href="{% url 'browse' %}" class="btn btn-ghost btn-sm">View All</a>
     </div>
-
     <div class="grid-manga">
       {% for manga in latest %}
       <a href="{% url 'manga-detail' manga.mangadex_id %}" class="manga-card">
@@ -84,8 +76,6 @@
     </div>
   </section>
   {% endif %}
-
-  <!-- Empty state if cache not seeded yet -->
   {% if not featured and not latest %}
   <div class="empty-state">
     <div class="empty-state-icon">
@@ -96,6 +86,5 @@
     <div class="empty-state-title">No manga yet</div>
   </div>
   {% endif %}
-
 </div>
 {% endblock %}

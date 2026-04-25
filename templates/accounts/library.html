@@ -1,12 +1,9 @@
 {% extends 'base.html' %}
 {% load manga_extras %}
 {% block title %}My Library — Scrollix{% endblock %}
-
 {% block content %}
 <div class="container" style="padding-top:2rem;padding-bottom:3rem">
   <h1 style="margin-bottom:1.5rem">My Library</h1>
-
-  <!-- ── Tabs ── -->
   <nav class="lib-tabs" aria-label="Library sections">
     {% for lt, label in bookmark_choices %}
     <a href="?tab={{ lt }}" class="lib-tab {% if active_tab == lt %}active{% endif %}">
@@ -17,8 +14,6 @@
       History <span class="lib-badge">{{ history_count }}</span>
     </a>
   </nav>
-
-  <!-- ── Bookmark Grid ── -->
   {% if active_tab != 'history' %}
     {% if bookmarks %}
     <div class="grid-manga">
@@ -46,8 +41,6 @@
       <a href="{% url 'browse' %}" class="btn btn-primary" style="margin-top:1rem">Browse Manga</a>
     </div>
     {% endif %}
-
-  <!-- ── Read History ── -->
   {% else %}
     {% if history %}
     <div class="chapter-list">
@@ -66,6 +59,5 @@
     </div>
     {% endif %}
   {% endif %}
-
 </div>
 {% endblock %}
