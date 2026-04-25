@@ -51,15 +51,15 @@
           {% endif %}
 
           {% if user.is_authenticated %}
-          <button class="bookmark-btn {% if user_bookmark %}bookmarked{% endif %}"
-                  id="bookmark-btn"
-                  data-mangadex-id="{{ manga.mangadex_id }}"
-                  data-list-type="{{ user_bookmark.list_type|default:'reading' }}"
-                  aria-label="Bookmark this manga">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-            <span class="btn-label">{% if user_bookmark %}Bookmarked ✓{% else %}Add to List{% endif %}</span>
-          </button>
+          {% csrf_token %}
+          <div class="bookmark-control">
+            <select id="bookmark-select" class="form-select {% if user_bookmark %}is-bookmarked{% endif %}" data-mangadex-id="{{ manga.mangadex_id }}" aria-label="Bookmark list" style="width: auto; min-width: 150px; font-weight: 500; cursor: pointer; border-color: var(--color-accent);">
+              <option value="">-- Add to List --</option>
+              {% for val, label in bookmark_choices %}
+              <option value="{{ val }}" {% if user_bookmark and user_bookmark.list_type == val %}selected{% endif %}>{{ label }}</option>
+              {% endfor %}
+            </select>
+          </div>
           {% else %}
           <a href="{% url 'login' %}" class="btn btn-ghost">Login to Bookmark</a>
           {% endif %}

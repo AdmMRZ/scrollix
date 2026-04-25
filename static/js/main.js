@@ -55,37 +55,43 @@
   });
 })();
 
-/* ── Bookmark toggle ── */
 (function () {
-  const btn = document.getElementById('bookmark-btn');
-  if (!btn) return;
-  const mangadexId = btn.dataset.mangadexId;
-  const csrfToken = document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
+  const bookmarkSelect = document.getElementById('bookmark-select');
+  if (bookmarkSelect) {
+    bookmarkSelect.addEventListener('change', async () => {
+      const mangadexId = bookmarkSelect.dataset.mangadexId;
+      const listType = bookmarkSelect.value;
+      const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]')?.value
+                     || document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '';
 
-  btn.addEventListener('click', async () => {
-    const listType = btn.dataset.listType || 'reading';
-    try {
-      btn.disabled = true;
-      const res = await fetch('/api/bookmark/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
-        body: JSON.stringify({ mangadex_id: mangadexId, list_type: listType }),
-      });
-      const data = await res.json();
-      if (data.action === 'removed') {
-        btn.classList.remove('bookmarked');
-        btn.querySelector('.btn-label').textContent = 'Add to List';
-      } else {
-        btn.classList.add('bookmarked');
-        btn.querySelector('.btn-label').textContent = 'Bookmarked ✓';
-        btn.dataset.listType = data.list_type;
+      bookmarkSelect.disabled = true;
+      try {
+        const res = await fetch('/api/bookmark/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': csrfToken
+          },
+          body: JSON.stringify({ mangadex_id: mangadexId, list_type: listType })
+        });
+
+        if (!res.ok) throw new Error('Network error');
+        
+        const data = await res.json();
+        
+        if (data.action === 'removed') {
+          bookmarkSelect.classList.remove('is-bookmarked');
+        } else {
+          bookmarkSelect.classList.add('is-bookmarked');
+        }
+      } catch (err) {
+        console.error('Bookmark toggle failed:', err);
+        alert('Failed to update bookmark.');
+      } finally {
+        bookmarkSelect.disabled = false;
       }
-    } catch (e) {
-      console.error('Bookmark error', e);
-    } finally {
-      btn.disabled = false;
-    }
-  });
+    });
+  }
 })();
 
 /* ── Reader progress indicator ── */
@@ -103,7 +109,6 @@
   pages.forEach((p, i) => { p.dataset.page = i + 1; io.observe(p); });
 })();
 
-/* ── Advanced Search (Browse page) ── */
 (function () {
   /* Dropdown toggles */
   document.querySelectorAll('.adv-dropdown-btn').forEach(btn => {

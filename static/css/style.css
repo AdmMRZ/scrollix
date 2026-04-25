@@ -176,6 +176,7 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
     background: var(--bg-surface); padding: 1rem 1.5rem;
     border-bottom: 1px solid var(--color-border); gap: 0.5rem; z-index: 99;
   }
+  .hide-mobile { display: none !important; }
 }
 
 /* ─── Buttons ─────────────────────────────────────── */
@@ -282,7 +283,11 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
 .form-input:focus, .form-select:focus {
   outline: none; border-color: var(--color-accent); box-shadow: var(--glow);
 }
-.form-select option { background: var(--bg-surface); }
+.form-select.is-bookmarked {
+  background: var(--color-accent-dim);
+  color: #fff;
+}
+.form-select option { background: var(--bg-surface); color: var(--color-text); }
 .form-error { font-size: 0.8rem; color: #f87171; margin-top: 0.3rem; }
 
 /* ─── Carousel / Hero ────────────────────────────── */

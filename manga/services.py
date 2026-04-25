@@ -146,23 +146,18 @@ def fetch_latest_manga(limit: int = 24) -> list[dict]:
 
 # ─── Image URL Builder ────────────────────────────────────────────────────────
 
-def build_page_urls(at_home: dict, quality: str = 'data-saver') -> list[str]:
-    """
-    Construct full image URLs from /at-home/server response.
-    Format: {baseUrl}/{quality}/{chapterHash}/{filename}
-    Default: data-saver (compressed) to reduce bandwidth.
-    """
+def build_page_urls(at_home: dict, quality: str = 'data') -> list[str]:
     base = at_home['base_url']
     hash_ = at_home['hash']
+    
+    if quality == 'data-saver' and not at_home.get('pages_saver'):
+        quality = 'data'
+
     files = at_home['pages_saver'] if quality == 'data-saver' else at_home['pages']
     quality_path = 'data-saver' if quality == 'data-saver' else 'data'
     return [f"{base}/{quality_path}/{hash_}/{f}" for f in files]
 
-
-# ─── Cache Helpers ────────────────────────────────────────────────────────────
-
 def _parse_cover_url(manga_data: dict) -> str:
-    """Extract cover image URL from API response relationships."""
     mangadex_id = manga_data.get('id', '')
     for rel in manga_data.get('relationships', []):
         if rel.get('type') == 'cover_art':
@@ -183,11 +178,9 @@ def _parse_author(manga_data: dict, role: str = 'author') -> str:
 
 
 def _save_manga_to_cache(manga_data: dict) -> CachedManga:
-    """Parse API response and upsert into CachedManga."""
     attrs = manga_data.get('attributes', {})
     mangadex_id = manga_data.get('id', '')
 
-    # Title: prefer English, fallback to first available
     titles = attrs.get('title', {})
     title = (
         titles.get('en') or
@@ -442,22 +435,26 @@ def search_manga(
 def toggle_bookmark(user, manga: CachedManga, list_type: str = 'reading') -> dict:
     """
     Create bookmark if not exists; update list_type if exists;
-    delete if same list_type (toggle off).
+    delete if list_type is empty.
     Returns {'action': 'added'|'updated'|'removed', 'bookmark': obj|None}
     """
     existing = selectors.get_user_bookmark(user, manga)
+
+    if not list_type:
+        if existing:
+            existing.delete()
+        return {'action': 'removed', 'bookmark': None}
 
     if existing is None:
         bookmark = Bookmark.objects.create(user=user, manga=manga, list_type=list_type)
         return {'action': 'added', 'bookmark': bookmark}
 
-    if existing.list_type == list_type:
-        existing.delete()
-        return {'action': 'removed', 'bookmark': None}
+    if existing.list_type != list_type:
+        existing.list_type = list_type
+        existing.save(update_fields=['list_type', 'updated_at'])
+        return {'action': 'updated', 'bookmark': existing}
 
-    existing.list_type = list_type
-    existing.save(update_fields=['list_type', 'updated_at'])
-    return {'action': 'updated', 'bookmark': existing}
+    return {'action': 'unchanged', 'bookmark': existing}
 
 
 # ─── Read History Services ────────────────────────────────────────────────────

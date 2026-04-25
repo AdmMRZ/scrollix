@@ -82,13 +82,24 @@ def search_manga_in_cache(
 
 def get_chapters_for_manga(
     manga: CachedManga, language: str = 'en'
-) -> QuerySet:
-    """All chapters for a manga in a given language, ordered by chapter number."""
-    return (
-        manga.chapters
-        .filter(language=language)
-        .order_by('published_at')
-    )
+) -> list[CachedChapter]:
+    chapters_list = list(manga.chapters.filter(language=language).order_by('-published_at'))
+    
+    seen = set()
+    deduped = []
+    for ch in chapters_list:
+        if ch.chapter_number not in seen:
+            seen.add(ch.chapter_number)
+            deduped.append(ch)
+            
+    def sort_key(ch):
+        try:
+            return float(ch.chapter_number)
+        except (ValueError, TypeError):
+            return 0.0
+            
+    deduped.sort(key=sort_key)
+    return deduped
 
 
 def get_chapter_by_mangadex_id(chapter_id: str) -> Optional[CachedChapter]:
@@ -103,20 +114,10 @@ def get_chapter_by_mangadex_id(chapter_id: str) -> Optional[CachedChapter]:
 def get_adjacent_chapters(
     chapter: CachedChapter,
 ) -> dict[str, Optional[CachedChapter]]:
-    """
-    Return the previous and next chapters in the same manga/language feed.
-    Ordered by published_at ascending.
-    """
-    feed = list(
-        chapter.manga.chapters
-        .filter(language=chapter.language)
-        .order_by('published_at')
-        .values_list('id', 'mangadex_id')
-    )
+    chapters = get_chapters_for_manga(chapter.manga, chapter.language)
 
-    ids = [row[0] for row in feed]
     try:
-        idx = ids.index(chapter.id)
+        idx = chapters.index(chapter)
     except ValueError:
         return {'prev': None, 'next': None}
 
@@ -124,18 +125,15 @@ def get_adjacent_chapters(
     next_obj = None
 
     if idx > 0:
-        prev_id = feed[idx - 1][0]
-        prev_obj = CachedChapter.objects.get(id=prev_id)
+        prev_obj = chapters[idx - 1]
 
-    if idx < len(feed) - 1:
-        next_id = feed[idx + 1][0]
-        next_obj = CachedChapter.objects.get(id=next_id)
+    if idx < len(chapters) - 1:
+        next_obj = chapters[idx + 1]
 
     return {'prev': prev_obj, 'next': next_obj}
 
 
 def chapters_are_stale(manga: CachedManga) -> bool:
-    """True if the chapter cache is missing or expired for this manga."""
     chapter = manga.chapters.order_by('-cached_at').first()
     if chapter is None:
         return True

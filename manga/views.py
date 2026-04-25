@@ -2,13 +2,9 @@
 Thin views — all business logic delegated to services.py.
 Views only: get context, call service, return rendered template.
 """
-import json
 import math
 
-from django.views.generic import TemplateView, View
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.http import JsonResponse
-from django.shortcuts import get_object_or_404, redirect
+from django.views.generic import TemplateView
 from django.core.paginator import Paginator
 
 from django_ratelimit.decorators import ratelimit
@@ -148,63 +144,4 @@ class ReaderView(TemplateView):
             services.record_read(self.request.user, reader_data['chapter'])
 
         ctx.update(reader_data)
-        return ctx
-
-
-class ToggleBookmarkView(LoginRequiredMixin, View):
-    """POST endpoint: add/update/remove bookmark. Returns JSON."""
-
-    def post(self, request, *args, **kwargs):
-        try:
-            body = json.loads(request.body)
-        except json.JSONDecodeError:
-            return JsonResponse({'error': 'Invalid JSON'}, status=400)
-
-        mangadex_id = body.get('mangadex_id', '')
-        list_type = body.get('list_type', 'reading')
-
-        manga = selectors.get_manga_by_mangadex_id(mangadex_id)
-        if manga is None:
-            return JsonResponse({'error': 'Manga not found'}, status=404)
-
-        result = services.toggle_bookmark(request.user, manga, list_type)
-        return JsonResponse({
-            'action': result['action'],
-            'list_type': result['bookmark'].list_type if result['bookmark'] else None,
-        })
-
-
-class LibraryView(LoginRequiredMixin, TemplateView):
-    """User library: bookmarks by list type + read history."""
-    template_name = 'accounts/library.html'
-
-    def get_context_data(self, **kwargs):
-        ctx = super().get_context_data(**kwargs)
-        user = self.request.user
-        active_tab = self.request.GET.get('tab', 'reading')
-
-        list_types = ['reading', 'plan_to_read', 'completed', 'on_hold', 'dropped']
-
-        if active_tab == 'history':
-            ctx['history'] = selectors.get_user_read_history(user, limit=100)
-        elif active_tab in list_types:
-            ctx['bookmarks'] = selectors.get_user_bookmarks(user, list_type=active_tab)
-        else:
-            active_tab = 'reading'
-            ctx['bookmarks'] = selectors.get_user_bookmarks(user, list_type='reading')
-
-        # Counts for tab badges
-        ctx['counts'] = {
-            lt: selectors.get_user_bookmarks(user, list_type=lt).count()
-            for lt in list_types
-        }
-        ctx['history_count'] = selectors.get_user_read_history(user, limit=9999).count()
-        ctx['active_tab'] = active_tab
-        ctx['bookmark_choices'] = [
-            ('reading', 'Reading'),
-            ('plan_to_read', 'Plan to Read'),
-            ('completed', 'Completed'),
-            ('on_hold', 'On Hold'),
-            ('dropped', 'Dropped'),
-        ]
         return ctx
