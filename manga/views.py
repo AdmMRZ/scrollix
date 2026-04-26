@@ -1,6 +1,7 @@
 import math
 from django.views.generic import TemplateView
-from django.core.paginator import Paginator
+from django.http import HttpResponse
+from django.template.loader import render_to_string
 from django_ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
 from . import services, selectors
@@ -68,17 +69,28 @@ class MangaDetailView(TemplateView):
             ctx['not_found'] = True
             return ctx
         chapters = services.get_or_fetch_chapters(manga)
-        is_view_all = self.request.GET.get('all') == '1'
-        per_page = max(1, len(chapters)) if is_view_all else 50
-        paginator = Paginator(chapters, per_page)
-        ch_page = paginator.get_page(self.request.GET.get('ch_page', 1))
+        chapter_count = len(chapters)
+        THRESHOLD = 15
+        TOP = 6
+        BOTTOM = 3
+        is_truncated = chapter_count > THRESHOLD
+        if is_truncated:
+            chapters_top = chapters[:TOP]
+            chapters_bottom = chapters[chapter_count - BOTTOM:]
+            hidden_count = chapter_count - TOP - BOTTOM
+        else:
+            chapters_top = chapters
+            chapters_bottom = []
+            hidden_count = 0
         user_bookmark = None
         if self.request.user.is_authenticated:
             user_bookmark = selectors.get_user_bookmark(self.request.user, manga)
         ctx['manga'] = manga
-        ctx['chapters_page'] = ch_page
-        ctx['chapter_count'] = len(chapters)
-        ctx['is_view_all'] = is_view_all
+        ctx['chapters_top'] = chapters_top
+        ctx['chapters_bottom'] = chapters_bottom
+        ctx['chapter_count'] = chapter_count
+        ctx['is_truncated'] = is_truncated
+        ctx['hidden_count'] = hidden_count
         ctx['user_bookmark'] = user_bookmark
         ctx['bookmark_choices'] = [
             ('reading', 'Reading'),
@@ -89,6 +101,17 @@ class MangaDetailView(TemplateView):
         ]
         return ctx
     
+class ChapterListAllView(TemplateView):
+    def get(self, request, *args, **kwargs):
+        from django.core.paginator import Paginator
+        mangadex_id = str(kwargs['mangadex_id'])
+        manga = services.get_or_fetch_manga(mangadex_id)
+        if manga is None:
+            return HttpResponse('', status=404)
+        chapters = services.get_or_fetch_chapters(manga)
+        html = render_to_string('manga/_chapter_list_all.html', {'chapters': chapters}, request=request)
+        return HttpResponse(html)
+
 class ReaderView(TemplateView):
     template_name = 'manga/reader.html'
     @method_decorator(ratelimit(key='ip', rate='30/m', method='GET', block=True))
