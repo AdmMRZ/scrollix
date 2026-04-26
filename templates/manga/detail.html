@@ -77,6 +77,13 @@
   <section aria-label="Chapter list">
     <div class="section-header">
       <h2 class="section-title">Chapters <small style="font-size:0.85rem;font-family:var(--font-body);font-weight:400;color:var(--color-muted)">({{ chapter_count }})</small></h2>
+      {% if chapter_count > 50 %}
+        {% if is_view_all %}
+          <a href="?ch_page=1" class="btn btn-sm btn-ghost" style="font-size: 0.8rem; padding: 0.3rem 0.6rem;">Show Pages</a>
+        {% else %}
+          <a href="?all=1" class="btn btn-sm btn-ghost" style="font-size: 0.8rem; padding: 0.3rem 0.6rem;">View All</a>
+        {% endif %}
+      {% endif %}
     </div>
     {% if chapters_page.object_list %}
     <div class="chapter-list">
@@ -101,10 +108,7 @@
       {% if chapters_page.has_previous %}
       <a href="?ch_page={{ chapters_page.previous_page_number }}">&lsaquo;</a>
       {% endif %}
-      <div class="pagination-jump" title="Type a page number and press Enter">
-        <input type="number" class="page-jump-input" value="{{ chapters_page.number }}" min="1" max="{{ chapters_page.paginator.num_pages }}" aria-label="Jump to page">
-        <span class="page-jump-total">/ {{ chapters_page.paginator.num_pages }}</span>
-      </div>
+      <span class="current">{{ chapters_page.number }} / {{ chapters_page.paginator.num_pages }}</span>
       {% if chapters_page.has_next %}
       <a href="?ch_page={{ chapters_page.next_page_number }}">&rsaquo;</a>
       {% endif %}

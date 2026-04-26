@@ -181,31 +181,3 @@
     link.addEventListener('click', abortPendingImageRequests);
   });
 })();
-
-(function() {
-  const pageInput = document.querySelector('.page-jump-input');
-  if (pageInput) {
-    pageInput.addEventListener('keydown', (e) => {
-      if (e.key === 'Enter') {
-        e.preventDefault();
-        const page = parseInt(pageInput.value, 10);
-        const max = parseInt(pageInput.getAttribute('max'), 10);
-        if (page > 0 && page <= max) {
-          const urlParams = new URLSearchParams(window.location.search);
-          urlParams.set('ch_page', page);
-          window.location.search = urlParams.toString();
-        } else {
-          pageInput.value = pageInput.defaultValue;
-        }
-      }
-    });
-
-    pageInput.addEventListener('click', () => {
-      pageInput.select();
-    });
-
-    pageInput.addEventListener('blur', () => {
-      pageInput.value = pageInput.defaultValue;
-    });
-  }
-})();

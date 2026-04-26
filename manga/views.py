@@ -68,7 +68,9 @@ class MangaDetailView(TemplateView):
             ctx['not_found'] = True
             return ctx
         chapters = services.get_or_fetch_chapters(manga)
-        paginator = Paginator(chapters, 50)
+        is_view_all = self.request.GET.get('all') == '1'
+        per_page = max(1, len(chapters)) if is_view_all else 50
+        paginator = Paginator(chapters, per_page)
         ch_page = paginator.get_page(self.request.GET.get('ch_page', 1))
         user_bookmark = None
         if self.request.user.is_authenticated:
@@ -76,6 +78,7 @@ class MangaDetailView(TemplateView):
         ctx['manga'] = manga
         ctx['chapters_page'] = ch_page
         ctx['chapter_count'] = len(chapters)
+        ctx['is_view_all'] = is_view_all
         ctx['user_bookmark'] = user_bookmark
         ctx['bookmark_choices'] = [
             ('reading', 'Reading'),
