@@ -5,6 +5,8 @@ import requests as _requests
 from django.views.generic import View
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse, StreamingHttpResponse, HttpResponse
+from django_ratelimit.decorators import ratelimit
+from django.utils.decorators import method_decorator
 from . import selectors, services
 
 _PROXY_HEADERS = {
@@ -18,6 +20,7 @@ _ALLOWED_HOSTS = {
     's2.mangadex.org',
 }
 
+@method_decorator(ratelimit(key='ip', rate='100/m', method='GET', block=True), name='dispatch')
 class ImageProxyView(View):
     def get(self, request, *args, **kwargs):
         raw_url = request.GET.get('url', '').strip()
@@ -52,6 +55,7 @@ class ImageProxyView(View):
         return response
 
 
+@method_decorator(ratelimit(key='user', rate='30/m', method='POST', block=True), name='dispatch')
 class ToggleBookmarkView(LoginRequiredMixin, View):
     def post(self, request, *args, **kwargs):
         try:

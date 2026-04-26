@@ -9,6 +9,9 @@ from django.utils.text import slugify
 from django.core.cache import cache
 from django.utils.dateparse import parse_datetime
 from dataclasses import dataclass, field
+from .models import CachedManga, CachedChapter, Genre, Bookmark, ReadHistory
+from . import selectors
+from .integrations import mangadex_client
 
 @dataclass
 class MangaSearchQuery:
@@ -20,10 +23,6 @@ class MangaSearchQuery:
     sort: str = 'latest'
     page: int = 1
     page_size: int = 24
-
-from .models import CachedManga, CachedChapter, Genre, Bookmark, ReadHistory
-from . import selectors
-from .integrations import mangadex_client
 
 logger = logging.getLogger(__name__)
 
