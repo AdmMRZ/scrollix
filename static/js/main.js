@@ -17,7 +17,6 @@
   if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     timer = setInterval(next, 5000);
   }
-  // Touch swipe support
   let touchStartX = 0, touchStartY = 0;
   track.addEventListener('touchstart', e => {
     touchStartX = e.touches[0].clientX;
@@ -179,5 +178,40 @@
   const navigationLinks = document.querySelectorAll('.reader-nav a.btn, .reader-topbar a.btn');
   navigationLinks.forEach(link => {
     link.addEventListener('click', abortPendingImageRequests);
+  });
+})();
+
+// ── Show-all chapters (manga detail page) ───────────────────────────────────
+(function () {
+  const btn = document.getElementById('show-all-chapters-btn');
+  if (!btn) return;
+
+  btn.addEventListener('click', function () {
+    const mangaId = btn.dataset.mangaId;
+    const label   = document.getElementById('show-all-label');
+    const spinner = document.getElementById('show-all-spinner');
+    const wrapper = document.getElementById('show-all-wrapper'); // the button's parent div
+
+    label.style.display  = 'none';
+    spinner.style.display = 'inline-flex';
+    btn.disabled = true;
+
+    fetch('/manga/' + mangaId + '/chapters/all/')
+      .then(function (res) {
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        return res.text();
+      })
+      .then(function (html) {
+        // Replace ONLY the button wrapper with the full chapter list.
+        // The chapters_bottom items that follow the wrapper stay untouched.
+        wrapper.outerHTML = html;
+      })
+      .catch(function (err) {
+        console.error('show-all failed:', err);
+        label.textContent  = 'Failed to load — try again.';
+        label.style.display = 'inline';
+        spinner.style.display = 'none';
+        btn.disabled = false;
+      });
   });
 })();

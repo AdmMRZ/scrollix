@@ -429,8 +429,8 @@ def toggle_bookmark(user, manga: CachedManga, list_type: str = 'reading') -> dic
 def record_read(user, chapter: CachedChapter) -> ReadHistory:
     obj, _ = ReadHistory.objects.update_or_create(
         user=user,
-        chapter=chapter,
-        defaults={'manga': chapter.manga},
+        manga=chapter.manga,
+        defaults={'chapter': chapter},
     )
     return obj
 def seed_genres_from_api() -> int:

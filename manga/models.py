@@ -106,7 +106,7 @@ class ReadHistory(models.Model):
     )
     read_at = models.DateTimeField(auto_now=True)
     class Meta:
-        unique_together = ('user', 'chapter')
+        unique_together = ('user', 'manga')
         ordering = ['-read_at']
     def __str__(self):
         return f"{self.user.username} read {self.chapter}"

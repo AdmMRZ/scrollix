@@ -336,6 +336,7 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
   transition: var(--transition); cursor: pointer;
 }
 .chapter-item:hover { background: var(--bg-hover); border-color: var(--color-accent); }
+#chapter-list-container .chapter-item:visited .chapter-item-num, #chapter-list-container .chapter-item:visited .chapter-item-title, #chapter-list-container .chapter-item:visited .chapter-item-meta { color: #555566 !important; }
 .chapter-item-num { font-weight: 600; font-size: 0.9rem; }
 .chapter-item-title { font-size: 0.85rem; color: var(--color-muted); flex: 1; margin: 0 0.5rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 @media (max-width: 480px) { .chapter-item-title { display: none; } }

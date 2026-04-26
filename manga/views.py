@@ -1,5 +1,5 @@
 import math
-from django.views.generic import TemplateView
+from django.views.generic import TemplateView, View
 from django.http import HttpResponse
 from django.template.loader import render_to_string
 from django_ratelimit.decorators import ratelimit
@@ -69,6 +69,7 @@ class MangaDetailView(TemplateView):
             ctx['not_found'] = True
             return ctx
         chapters = services.get_or_fetch_chapters(manga)
+        chapters.reverse()
         chapter_count = len(chapters)
         THRESHOLD = 15
         TOP = 6
@@ -101,14 +102,14 @@ class MangaDetailView(TemplateView):
         ]
         return ctx
     
-class ChapterListAllView(TemplateView):
+class ChapterListAllView(View):
     def get(self, request, *args, **kwargs):
-        from django.core.paginator import Paginator
         mangadex_id = str(kwargs['mangadex_id'])
         manga = services.get_or_fetch_manga(mangadex_id)
         if manga is None:
             return HttpResponse('', status=404)
         chapters = services.get_or_fetch_chapters(manga)
+        chapters.reverse()  
         html = render_to_string('manga/_chapter_list_all.html', {'chapters': chapters}, request=request)
         return HttpResponse(html)
 
