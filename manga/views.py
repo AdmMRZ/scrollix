@@ -15,6 +15,7 @@ class HomeView(TemplateView):
         ctx = super().get_context_data(**kwargs)
         ctx.update(services.get_homepage_data())
         return ctx
+    
 class BrowseView(TemplateView):
     template_name = 'manga/browse.html'
     @method_decorator(ratelimit(key='ip', rate='30/m', method='GET', block=True))
@@ -28,7 +29,7 @@ class BrowseView(TemplateView):
         page = int(self.request.GET.get('page', 1))
         if form.is_valid():
             cd = form.cleaned_data
-            manga_list, total = services.search_manga(
+            search_query = services.MangaSearchQuery(
                 query=cd['q'],
                 genre_include=cd['genres_include'],
                 genre_exclude=cd['genres_exclude'],
@@ -38,10 +39,12 @@ class BrowseView(TemplateView):
                 page=page,
                 page_size=PAGE_SIZE,
             )
+            manga_list, total = services.search_manga(search_query)
         else:
-            manga_list, total = services.search_manga(
+            search_query = services.MangaSearchQuery(
                 sort='latest', page=page, page_size=PAGE_SIZE
             )
+            manga_list, total = services.search_manga(search_query)
         total_pages = math.ceil(total / PAGE_SIZE) if total else 1
         ctx['form'] = form
         ctx['manga_list'] = manga_list
@@ -51,6 +54,7 @@ class BrowseView(TemplateView):
         ctx['genres'] = selectors.get_all_genres()
         ctx['page_range'] = range(max(1, page - 2), min(total_pages + 1, page + 3))
         return ctx
+    
 class MangaDetailView(TemplateView):
     template_name = 'manga/detail.html'
     @method_decorator(ratelimit(key='ip', rate='60/m', method='GET', block=True))
@@ -81,6 +85,7 @@ class MangaDetailView(TemplateView):
             ('dropped', 'Dropped'),
         ]
         return ctx
+    
 class ReaderView(TemplateView):
     template_name = 'manga/reader.html'
     @method_decorator(ratelimit(key='ip', rate='30/m', method='GET', block=True))

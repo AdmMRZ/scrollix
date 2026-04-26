@@ -3,56 +3,46 @@ import logging
 import time
 import urllib.parse
 from typing import Optional
-import requests
 from django.conf import settings
 from django.utils import timezone
 from django.utils.text import slugify
-from .models import CachedManga, CachedChapter, Genre, Bookmark, ReadHistory
-from . import selectors
 from django.core.cache import cache
 from django.utils.dateparse import parse_datetime
+from dataclasses import dataclass, field
+
+@dataclass
+class MangaSearchQuery:
+    query: str = ''
+    genre_include: list[str] = field(default_factory=list)
+    genre_exclude: list[str] = field(default_factory=list)
+    status: str = ''
+    manga_type: str = ''
+    sort: str = 'latest'
+    page: int = 1
+    page_size: int = 24
+
+from .models import CachedManga, CachedChapter, Genre, Bookmark, ReadHistory
+from . import selectors
+from .integrations import mangadex_client
 
 logger = logging.getLogger(__name__)
-MANGADEX_BASE = settings.MANGADEX_API_BASE
-REQUEST_TIMEOUT = 25  
-REQUEST_HEADERS = {
-    'User-Agent': 'Scrollix/1.0 (personal manga reader; contact via github)',
-}
 
-def _api_get(path: str, params: dict = None) -> dict | None:
-    url = f"{MANGADEX_BASE}{path}"
-    try:
-        response = requests.get(
-            url,
-            params=params,
-            headers=REQUEST_HEADERS,
-            timeout=REQUEST_TIMEOUT,
-        )
-        if response.status_code == 429:
-            logger.warning("MangaDex rate limit hit — sleeping 2s")
-            time.sleep(2)
-            response = requests.get(url, params=params, headers=REQUEST_HEADERS,
-                                    timeout=REQUEST_TIMEOUT)
-        response.raise_for_status()
-        return response.json()
-    except requests.RequestException as exc:
-        logger.error("MangaDex API error for %s: %s", path, exc)
-        return None
 def fetch_manga_detail(mangadex_id: str) -> dict | None:
-    data = _api_get(f"/manga/{mangadex_id}", params={
+    data = mangadex_client.api_get(f"/manga/{mangadex_id}", params={
         'includes[]': ['author', 'artist', 'cover_art'],
     })
     return data.get('data') if data else None
     
 def fetch_manga_list(params: dict) -> list[dict]:
-    data = _api_get('/manga', params=params)
+    data = mangadex_client.api_get('/manga', params=params)
     return data.get('data', []) if data else []
+
 def fetch_chapter_feed(mangadex_id: str, language: str = 'en') -> list[dict]:
     chapters = []
     offset = 0
     limit = 500
     while True:
-        data = _api_get(f"/manga/{mangadex_id}/feed", params={
+        data = mangadex_client.api_get(f"/manga/{mangadex_id}/feed", params={
             'translatedLanguage[]': language,
             'order[chapter]': 'asc',
             'limit': limit,
@@ -70,7 +60,7 @@ def fetch_chapter_feed(mangadex_id: str, language: str = 'en') -> list[dict]:
     return chapters
 
 def fetch_chapter_pages(chapter_id: str) -> dict | None:
-    data = _api_get(f"/at-home/server/{chapter_id}")
+    data = mangadex_client.api_get(f"/at-home/server/{chapter_id}")
     if not data:
         logger.error("fetch_chapter_pages: no data returned for chapter %s", chapter_id)
         return None
@@ -91,7 +81,7 @@ def fetch_chapter_pages(chapter_id: str) -> dict | None:
     }
 
 def fetch_tags() -> list[dict]:
-    data = _api_get('/manga/tag')
+    data = mangadex_client.api_get('/manga/tag')
     return data.get('data', []) if data else []
 
 def fetch_popular_manga(limit: int = 20) -> list[dict]:
@@ -144,57 +134,53 @@ def _parse_cover_url(manga_data: dict) -> str:
 def fetch_manga_statistics(mangadex_ids: list[str]) -> dict:
     if not mangadex_ids:
         return {}
-    data = _api_get('/statistics/manga', params={'manga[]': mangadex_ids})
+    data = mangadex_client.api_get('/statistics/manga', params={'manga[]': mangadex_ids})
     if not data:
         return {}
     return data.get('statistics', {})
 
-def _save_manga_to_cache(manga_data: dict, stats: dict = None) -> CachedManga:
-    attrs = manga_data.get('attributes', {})
-    mangadex_id = manga_data.get('id', '')
-    
-    follow_count = 0
-    if stats and mangadex_id in stats:
-        follow_count = stats[mangadex_id].get('follows', 0)
-
-    lang = attrs.get('originalLanguage', '')
-    if lang == 'ja':
-        custom_type = 'Manga'
-    elif lang == 'ko':
-        custom_type = 'Manhwa'
-    elif 'zh' in lang:
-        custom_type = 'Manhua'
-    else:
-        custom_type = 'Manga'
-
+def _extract_manga_title(attrs: dict) -> str:
     titles = attrs.get('title', {})
     title = titles.get('en')
     if not title:
         for alt in attrs.get('altTitles', []):
             if 'en' in alt:
-                title = alt['en']
-                break
-    if not title:
-        title = (
-            titles.get('ja-ro') or 
-            titles.get('ja') or
-            next(iter(titles.values()), 'Unknown')
-        )
-    alt_titles = []
-    for alt in attrs.get('altTitles', []):
-        for lang, val in alt.items():
-            if val and val != title:
-                alt_titles.append(val)
+                return alt['en']
+    return title or titles.get('ja-ro') or titles.get('ja') or next(iter(titles.values()), 'Unknown')
+
+def _extract_manga_creators(relationships: list) -> tuple[str, str]:
+    author, artist = '', ''
+    for rel in relationships:
+        name = rel.get('attributes', {}).get('name', '')
+        rel_type = rel.get('type')
+        if rel_type == 'author' and not author:
+            author = name
+        elif rel_type == 'artist' and not artist:
+            artist = name
+    return author, artist
+
+def _save_manga_to_cache(manga_data: dict, stats: dict = None) -> CachedManga:
+    attrs = manga_data.get('attributes', {})
+    mangadex_id = manga_data.get('id', '')
+    
+    follow_count = stats.get(mangadex_id, {}).get('follows', 0) if stats else 0
+
+    lang = attrs.get('originalLanguage', '')
+    custom_type_map = {'ja': 'Manga', 'ko': 'Manhwa', 'zh': 'Manhua'}
+    custom_type = next((v for k, v in custom_type_map.items() if k in lang), 'Manga')
+
+    title = _extract_manga_title(attrs)
+    
+    alt_titles = [
+        val for alt in attrs.get('altTitles', [])
+        for k, val in alt.items() if val and val != title
+    ]
+    
     desc = attrs.get('description', {})
     description = desc.get('en', '') or next(iter(desc.values()), '')
-    author = ''
-    artist = ''
-    for rel in manga_data.get('relationships', []):
-        name = rel.get('attributes', {}).get('name', '')
-        if rel.get('type') == 'author' and not author:
-            author = name
-        elif rel.get('type') == 'artist' and not artist:
-            artist = name
+    
+    author, artist = _extract_manga_creators(manga_data.get('relationships', []))
+
     manga, _ = CachedManga.objects.update_or_create(
         mangadex_id=mangadex_id,
         defaults={
@@ -322,28 +308,21 @@ def get_homepage_data() -> dict:
     }
 
 def search_manga(
-    query: str = '',
-    genre_include: list[str] | None = None,
-    genre_exclude: list[str] | None = None,
-    status: str = '',
-    manga_type: str = '',
-    sort: str = 'latest',
-    page: int = 1,
-    page_size: int = 24,
+    search_query: MangaSearchQuery,
 ) -> tuple[list, int]:
     params: dict = {
-        'limit': page_size,
-        'offset': (page - 1) * page_size,
+        'limit': search_query.page_size,
+        'offset': (search_query.page - 1) * search_query.page_size,
         'includes[]': ['cover_art', 'author'],
         'contentRating[]': ['safe', 'suggestive'],
         'availableTranslatedLanguage[]': 'en',
     }
-    if query:
-        params['title'] = query
-    if status:
-        params['status[]'] = status
-    if manga_type:
-        params['originalLanguage[]'] = [manga_type]
+    if search_query.query:
+        params['title'] = search_query.query
+    if search_query.status:
+        params['status[]'] = search_query.status
+    if search_query.manga_type:
+        params['originalLanguage[]'] = [search_query.manga_type]
     sort_map = {
         'latest': ('latestUploadedChapter', 'desc'),
         'popular': ('followedCount', 'desc'),
@@ -351,19 +330,19 @@ def search_manga(
         '-title': ('title', 'desc'),
         'year': ('year', 'asc'),
     }
-    order_field, order_dir = sort_map.get(sort, ('latestUploadedChapter', 'desc'))
+    order_field, order_dir = sort_map.get(search_query.sort, ('latestUploadedChapter', 'desc'))
     params[f'order[{order_field}]'] = order_dir
-    if genre_include:
-        params['includedTags[]'] = genre_include
-    if genre_exclude:
-        params['excludedTags[]'] = genre_exclude
-    data = _api_get('/manga', params=params)
+    if search_query.genre_include:
+        params['includedTags[]'] = search_query.genre_include
+    if search_query.genre_exclude:
+        params['excludedTags[]'] = search_query.genre_exclude
+    data = mangadex_client.api_get('/manga', params=params)
     if not data:
-        qs = selectors.search_manga_in_cache(query, genre_include, genre_exclude,
-                                              status, manga_type, sort)
+        qs = selectors.search_manga_in_cache(search_query.query, search_query.genre_include, search_query.genre_exclude,
+                                              search_query.status, search_query.manga_type, search_query.sort)
         total = qs.count()
-        start = (page - 1) * page_size
-        return list(qs[start:start + page_size]), total
+        start = (search_query.page - 1) * search_query.page_size
+        return list(qs[start:start + search_query.page_size]), total
     results = data.get('data', [])
     total = data.get('total', len(results))
     manga_list = []
