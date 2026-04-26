@@ -1,1 +1,1 @@
-web: gunicorn scrollix.wsgi --bind 0.0.0.0:$PORT --timeout 120
+web: python manage.py collectstatic --noinput && gunicorn scrollix.wsgi --bind 0.0.0.0:$PORT --timeout 120
