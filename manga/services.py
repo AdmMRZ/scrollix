@@ -1,6 +1,5 @@
 from __future__ import annotations
 import logging
-import time
 import urllib.parse
 from typing import Optional
 from django.conf import settings
@@ -209,6 +208,14 @@ def _save_manga_to_cache(manga_data: dict, stats: dict = None) -> CachedManga:
             tag_ids.append(genre.pk)
     manga.genres.set(tag_ids)
     return manga
+
+def _get_mangas_by_ids(ids: list[str]) -> list[CachedManga]:
+    """Fetches CachedManga objects from DB and orders them according to the provided ID list."""
+    if not ids:
+        return []
+    qs = CachedManga.objects.prefetch_related('genres').filter(mangadex_id__in=ids)
+    mangas = {m.mangadex_id: m for m in qs}
+    return [mangas[i] for i in ids if i in mangas]
 def _save_chapters_to_cache(
     manga: CachedManga, chapters_data: list[dict]
 ) -> None:
@@ -295,15 +302,9 @@ def get_homepage_data() -> dict:
             _save_manga_to_cache(m)
         cache.set('home_latest_ids', latest_ids, getattr(settings, 'CACHE_TTL_MANGA', 86400))
 
-    def _order_qs(ids):
-        if not ids: return []
-        qs = CachedManga.objects.prefetch_related('genres').filter(mangadex_id__in=ids)
-        mangas = {m.mangadex_id: m for m in qs}
-        return [mangas[i] for i in ids if i in mangas]
-
     return {
-        'featured': _order_qs(featured_ids),
-        'latest': _order_qs(latest_ids),
+        'featured': _get_mangas_by_ids(featured_ids),
+        'latest': _get_mangas_by_ids(latest_ids),
     }
 
 def _search_cache_key(search_query: MangaSearchQuery) -> str:
@@ -319,20 +320,8 @@ def _search_cache_key(search_query: MangaSearchQuery) -> str:
     ]
     return "search:" + "|".join(parts)
 
-
-def search_manga(
-    search_query: MangaSearchQuery,
-) -> tuple[list, int]:
-    cache_key = _search_cache_key(search_query)
-    ttl = getattr(settings, 'CACHE_TTL_MANGA', 86400)
-
-    cached_payload = cache.get(cache_key)
-    if cached_payload is not None:
-        ids, total = cached_payload
-        qs = CachedManga.objects.prefetch_related('genres').filter(mangadex_id__in=ids)
-        manga_by_id = {m.mangadex_id: m for m in qs}
-        manga_list = [manga_by_id[i] for i in ids if i in manga_by_id]
-        return manga_list, total
+def _build_search_params(search_query: MangaSearchQuery) -> dict:
+    """Builds the API request parameters from a MangaSearchQuery object."""
     params: dict = {
         'limit': search_query.page_size,
         'offset': (search_query.page - 1) * search_query.page_size,
@@ -346,6 +335,7 @@ def search_manga(
         params['status[]'] = search_query.status
     if search_query.manga_type:
         params['originalLanguage[]'] = [search_query.manga_type]
+    
     sort_map = {
         'latest': ('latestUploadedChapter', 'desc'),
         'popular': ('followedCount', 'desc'),
@@ -355,14 +345,48 @@ def search_manga(
     }
     order_field, order_dir = sort_map.get(search_query.sort, ('latestUploadedChapter', 'desc'))
     params[f'order[{order_field}]'] = order_dir
+    
     if search_query.genre_include:
         params['includedTags[]'] = search_query.genre_include
     if search_query.genre_exclude:
         params['excludedTags[]'] = search_query.genre_exclude
+        
+    return params
+
+def _is_default_latest(sq: MangaSearchQuery) -> bool:
+    return (
+        not sq.query
+        and not sq.status
+        and not sq.manga_type
+        and not sq.genre_include
+        and not sq.genre_exclude
+        and sq.sort in ('latest', '')
+        and sq.page == 1
+    )
+
+def search_manga(
+    search_query: MangaSearchQuery,
+) -> tuple[list, int]:
+    ttl = getattr(settings, 'CACHE_TTL_MANGA', 86400)
+
+    if _is_default_latest(search_query):
+        ids = cache.get('home_latest_ids')
+        if ids:
+            ids = ids[:search_query.page_size]
+            manga_list = _get_mangas_by_ids(ids)
+            total = cache.get('home_latest_total', len(manga_list))
+            return manga_list, total
+
+    cache_key = _search_cache_key(search_query)
+    cached_payload = cache.get(cache_key)
+    if cached_payload is not None:
+        ids, total = cached_payload
+        return _get_mangas_by_ids(ids), total
+
+    params = _build_search_params(search_query)
 
     data = mangadex_client.api_get('/manga', params=params)
     if not data:
-        # API down — fallback to DB
         qs = selectors.search_manga_in_cache(
             search_query.query, search_query.genre_include, search_query.genre_exclude,
             search_query.status, search_query.manga_type, search_query.sort,
@@ -380,8 +404,12 @@ def search_manga(
         manga_list.append(cached)
         ids.append(cached.mangadex_id)
 
-    # Store only IDs + total in cache (small footprint, DB is source of truth)
     cache.set(cache_key, (ids, total), ttl)
+
+    if _is_default_latest(search_query):
+        cache.set('home_latest_ids', ids, ttl)
+        cache.set('home_latest_total', total, ttl)
+
     return manga_list, total
 def toggle_bookmark(user, manga: CachedManga, list_type: str = 'reading') -> dict:
     existing = selectors.get_user_bookmark(user, manga)
