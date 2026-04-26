@@ -156,10 +156,8 @@
 (function () {
   function abortPendingImageRequests() {
     const mangaPages = document.querySelectorAll('img.manga-page');
-    // A transparent 1x1 GIF so we don't trigger broken image icons
     const emptyImage = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
     mangaPages.forEach(image => {
-      // Only abort requests that are actively downloading
       if (!image.complete) {
         image.src = emptyImage;
       }
