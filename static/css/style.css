@@ -367,8 +367,12 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
   font-size: 0.8rem; color: var(--color-muted);
   backdrop-filter: blur(8px);
   z-index: 40;
-  /* safe area for devices with home indicator */
+  transition: opacity 0.2s ease, visibility 0.2s ease;
   padding-bottom: calc(0.5rem + env(safe-area-inset-bottom, 0px));
+}
+.reader-progress.is-hidden {
+  opacity: 0;
+  visibility: hidden;
 }
 .detail-hero {
   position: relative; border-radius: var(--radius-lg);

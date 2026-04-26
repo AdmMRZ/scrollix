@@ -96,15 +96,27 @@
   const progress = document.querySelector('.reader-progress');
   const pages = document.querySelectorAll('.page-wrapper');
   if (!progress || !pages.length) return;
+
   const io = new IntersectionObserver(entries => {
     let visible = 0;
     entries.forEach(e => { if (e.isIntersecting) visible = parseInt(e.target.dataset.page); });
     if (visible) {
-      const ch = progress.dataset.chapter ? `${progress.dataset.chapter} \u2022 ` : '';
-      progress.textContent = `${ch}${visible} / ${pages.length}`;
+      const rawCh = progress.dataset.chapter || '';
+      const ch = rawCh.replace(/^Chapter\s+/i, '').replace(/^Ch\.\s*/i, '');
+      progress.textContent = ch ? `${ch} \u2022 ${visible} / ${pages.length}` : `${visible} / ${pages.length}`;
     }
   }, { threshold: 0.5 });
   pages.forEach((p, i) => { p.dataset.page = i + 1; io.observe(p); });
+
+  const nav = document.querySelector('.reader-nav');
+  if (nav) {
+    const navObserver = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        progress.classList.toggle('is-hidden', e.isIntersecting);
+      });
+    }, { threshold: 0.1 });
+    navObserver.observe(nav);
+  }
 })();
 (function () {
   document.querySelectorAll('.adv-dropdown-btn').forEach(btn => {
