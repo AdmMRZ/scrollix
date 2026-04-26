@@ -300,7 +300,7 @@ def get_homepage_data() -> dict:
         latest_ids = [m['id'] for m in raw_latest]
         for m in raw_latest:
             _save_manga_to_cache(m)
-        cache.set('home_latest_ids', latest_ids, getattr(settings, 'CACHE_TTL_MANGA', 86400))
+        cache.set('home_latest_ids', 10000, getattr(settings, 'CACHE_TTL_MANGA', 86400))
 
     return {
         'featured': _get_mangas_by_ids(featured_ids),
