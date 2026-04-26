@@ -36,6 +36,6 @@ class MangaDexClient:
             return response.json()
         except requests.RequestException as exc:
             logger.error("MangaDex API error for %s: %s", path, exc)
-            return None
+            raise exc
 
 mangadex_client = MangaDexClient()
