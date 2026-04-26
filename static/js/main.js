@@ -149,3 +149,17 @@
     if (x) x.value = exc.join(',');
   });
 })();
+
+(function () {
+  function abortPendingImageRequests() {
+    const mangaPages = document.querySelectorAll('img.manga-page');
+    mangaPages.forEach(image => {
+      image.removeAttribute('src');
+    });
+  }
+
+  const navigationLinks = document.querySelectorAll('.reader-nav a.btn, .reader-topbar a.btn');
+  navigationLinks.forEach(link => {
+    link.addEventListener('click', abortPendingImageRequests);
+  });
+})();
