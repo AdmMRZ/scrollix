@@ -1,5 +1,7 @@
 from pathlib import Path
 from decouple import config, Csv
+import dj_database_url
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = config('SECRET_KEY')
 DEBUG = config('DEBUG', default=False, cast=bool)
@@ -44,10 +46,11 @@ TEMPLATES = [
 ]
 WSGI_APPLICATION = 'scrollix.wsgi.application'
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default=config('DATABASE_URL', default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
 }
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_PASSWORD_VALIDATORS = [
@@ -108,3 +111,4 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
 CSRF_COOKIE_HTTPONLY = True
 SESSION_COOKIE_HTTPONLY = True
+CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='https://*.railway.app', cast=Csv())
