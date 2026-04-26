@@ -37,7 +37,7 @@
                stroke="currentColor" stroke-width="2">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
           </svg>
-          Search
+          <span class="btn-label">Search</span>
         </button>
       </div>
       <div class="adv-filter-row" id="adv-filter-row">
@@ -150,10 +150,10 @@
             {% endfor %}
           </div>
           {% endif %}
+          {% if manga.last_chapter %}
+          <div class="adv-card-ch">Ch.{{ manga.last_chapter }}</div>
+          {% endif %}
         </div>
-        {% if manga.last_chapter %}
-        <div class="adv-card-ch">Ch.{{ manga.last_chapter }}</div>
-        {% endif %}
       </a>
       {% endfor %}
     </div>

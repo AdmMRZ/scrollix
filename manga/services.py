@@ -306,9 +306,33 @@ def get_homepage_data() -> dict:
         'latest': _order_qs(latest_ids),
     }
 
+def _search_cache_key(search_query: MangaSearchQuery) -> str:
+    parts = [
+        f"q={search_query.query}",
+        f"sort={search_query.sort}",
+        f"page={search_query.page}",
+        f"size={search_query.page_size}",
+        f"status={search_query.status}",
+        f"type={search_query.manga_type}",
+        f"inc={','.join(sorted(search_query.genre_include))}",
+        f"exc={','.join(sorted(search_query.genre_exclude))}",
+    ]
+    return "search:" + "|".join(parts)
+
+
 def search_manga(
     search_query: MangaSearchQuery,
 ) -> tuple[list, int]:
+    cache_key = _search_cache_key(search_query)
+    ttl = getattr(settings, 'CACHE_TTL_MANGA', 86400)
+
+    cached_payload = cache.get(cache_key)
+    if cached_payload is not None:
+        ids, total = cached_payload
+        qs = CachedManga.objects.prefetch_related('genres').filter(mangadex_id__in=ids)
+        manga_by_id = {m.mangadex_id: m for m in qs}
+        manga_list = [manga_by_id[i] for i in ids if i in manga_by_id]
+        return manga_list, total
     params: dict = {
         'limit': search_query.page_size,
         'offset': (search_query.page - 1) * search_query.page_size,
@@ -335,19 +359,29 @@ def search_manga(
         params['includedTags[]'] = search_query.genre_include
     if search_query.genre_exclude:
         params['excludedTags[]'] = search_query.genre_exclude
+
     data = mangadex_client.api_get('/manga', params=params)
     if not data:
-        qs = selectors.search_manga_in_cache(search_query.query, search_query.genre_include, search_query.genre_exclude,
-                                              search_query.status, search_query.manga_type, search_query.sort)
+        # API down — fallback to DB
+        qs = selectors.search_manga_in_cache(
+            search_query.query, search_query.genre_include, search_query.genre_exclude,
+            search_query.status, search_query.manga_type, search_query.sort,
+        )
         total = qs.count()
         start = (search_query.page - 1) * search_query.page_size
         return list(qs[start:start + search_query.page_size]), total
+
     results = data.get('data', [])
     total = data.get('total', len(results))
     manga_list = []
+    ids = []
     for m in results:
         cached = _save_manga_to_cache(m)
         manga_list.append(cached)
+        ids.append(cached.mangadex_id)
+
+    # Store only IDs + total in cache (small footprint, DB is source of truth)
+    cache.set(cache_key, (ids, total), ttl)
     return manga_list, total
 def toggle_bookmark(user, manga: CachedManga, list_type: str = 'reading') -> dict:
     existing = selectors.get_user_bookmark(user, manga)

@@ -112,3 +112,13 @@ X_FRAME_OPTIONS = 'DENY'
 CSRF_COOKIE_HTTPONLY = True
 SESSION_COOKIE_HTTPONLY = True
 CSRF_TRUSTED_ORIGINS = config('CSRF_TRUSTED_ORIGINS', default='https://*.railway.app', cast=Csv())
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+        'LOCATION': 'scrollix_cache',
+        'TIMEOUT': CACHE_TTL_MANGA,
+        'OPTIONS': {
+            'MAX_ENTRIES': 2000,
+        },
+    }
+}
