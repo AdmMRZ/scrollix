@@ -1,4 +1,5 @@
 from django import template
+from django.conf import settings
 from urllib.parse import quote
 register = template.Library()
 
@@ -14,5 +15,7 @@ def dict_get(d, key):
 def img_proxy(url):
     if not url:
         return ''
+    if not getattr(settings, 'USE_IMAGE_PROXY', False):
+        return url
     return f'/api/img-proxy/?url={quote(url, safe="")}'
 
