@@ -19,6 +19,7 @@
       </a>
       <span class="reader-topbar-title" style="flex: 1; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;">
         {{ manga.title }} &mdash; {{ chapter.display_number }}{% if chapter.title %}: {{ chapter.title }}{% endif %}
+        {% if chapter.scanlation_group %}<small style="opacity: 0.6; margin-left: 0.5rem;">(Scanlation: {{ chapter.scanlation_group }})</small>{% endif %}
       </span>
     </div>
     <div style="display: flex; gap: 0.5rem; align-items: center; flex-shrink: 0;">

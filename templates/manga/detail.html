@@ -90,6 +90,7 @@
         <span class="chapter-item-title"></span>
         {% endif %}
         <span class="chapter-item-meta">
+          {% if chapter.scanlation_group %}{{ chapter.scanlation_group }} &bull; {% endif %}
           {{ chapter.published_at|date:"M j, Y"|default:"—" }}
         </span>
       </a>
