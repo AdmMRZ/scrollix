@@ -1,0 +1,21 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ error_code }} - {{ error_title }} - Scrollix{% endblock %}
+
+{% block content %}
+<section class="error-page container">
+  <div class="error-card glass-panel">
+    <p class="error-code">{{ error_code }}</p>
+    <h1 class="error-title">{{ error_title }}</h1>
+    <p class="error-message">{{ error_message }}</p>
+
+    <div class="error-actions">
+      <a href="{% url 'home' %}" class="btn btn-primary">Back to Home</a>
+      <a href="{% url 'browse' %}" class="btn btn-ghost">Browse Manga</a>
+      {% if can_retry %}
+      <button type="button" class="btn btn-ghost" onclick="window.location.reload()">Try Again</button>
+      {% endif %}
+    </div>
+  </div>
+</section>
+{% endblock %}
