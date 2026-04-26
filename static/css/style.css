@@ -427,8 +427,34 @@ h3 { font-size: clamp(1.1rem, 2vw, 1.4rem); }
   border: 1px solid var(--color-border);
 }
 .pagination a:hover { border-color: var(--color-accent); color: var(--color-accent); }
-.pagination span.current { background: var(--color-accent); border-color: var(--color-accent); }
+.pagination span.current { background: var(--color-accent); border-color: var(--color-accent); color: #0f111a; }
 .pagination .disabled { opacity: 0.4; pointer-events: none; }
+
+.pagination-jump {
+  display: flex; align-items: center; justify-content: center;
+  height: 36px; border-radius: var(--radius-sm);
+  background: var(--color-accent); border: 1px solid var(--color-accent);
+  padding: 0 0.5rem; gap: 0.2rem; color: #0f111a;
+  transition: opacity 0.2s;
+}
+.pagination-jump:focus-within {
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.4);
+}
+.page-jump-input {
+  background: transparent; border: none; color: inherit;
+  font-family: inherit; font-size: 0.875rem; text-align: right;
+  width: 2.2rem; padding: 0; margin: 0; outline: none;
+  font-weight: 600;
+}
+/* Hide arrows in number input */
+.page-jump-input::-webkit-outer-spin-button,
+.page-jump-input::-webkit-inner-spin-button {
+  -webkit-appearance: none; margin: 0;
+}
+.page-jump-input[type=number] { -moz-appearance: textfield; }
+.page-jump-total {
+  font-size: 0.875rem; font-weight: 600; pointer-events: none;
+}
 .lib-tabs {
   display: flex; gap: 0.25rem; margin-bottom: 2rem;
   border-bottom: 1px solid var(--color-border); overflow-x: auto; padding-bottom: 0;

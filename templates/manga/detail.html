@@ -101,7 +101,10 @@
       {% if chapters_page.has_previous %}
       <a href="?ch_page={{ chapters_page.previous_page_number }}">&lsaquo;</a>
       {% endif %}
-      <span class="current">{{ chapters_page.number }} / {{ chapters_page.paginator.num_pages }}</span>
+      <div class="pagination-jump" title="Type a page number and press Enter">
+        <input type="number" class="page-jump-input" value="{{ chapters_page.number }}" min="1" max="{{ chapters_page.paginator.num_pages }}" aria-label="Jump to page">
+        <span class="page-jump-total">/ {{ chapters_page.paginator.num_pages }}</span>
+      </div>
       {% if chapters_page.has_next %}
       <a href="?ch_page={{ chapters_page.next_page_number }}">&rsaquo;</a>
       {% endif %}
