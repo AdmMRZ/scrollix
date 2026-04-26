@@ -36,6 +36,16 @@ def error_403(request, exception):
     )
 
 
+def csrf_failure(request, reason=''):
+    return _render_error_page(
+        request,
+        status_code=403,
+        title='Session Expired',
+        message='Your security token is invalid or expired. Please refresh and try logging in again.',
+        can_retry=True,
+    )
+
+
 def error_404(request, exception):
     return _render_error_page(
         request,
