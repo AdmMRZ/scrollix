@@ -99,7 +99,10 @@
   const io = new IntersectionObserver(entries => {
     let visible = 0;
     entries.forEach(e => { if (e.isIntersecting) visible = parseInt(e.target.dataset.page); });
-    if (visible) progress.textContent = `${visible} / ${pages.length}`;
+    if (visible) {
+      const ch = progress.dataset.chapter ? `${progress.dataset.chapter} \u2022 ` : '';
+      progress.textContent = `${ch}${visible} / ${pages.length}`;
+    }
   }, { threshold: 0.5 });
   pages.forEach((p, i) => { p.dataset.page = i + 1; io.observe(p); });
 })();
@@ -153,8 +156,13 @@
 (function () {
   function abortPendingImageRequests() {
     const mangaPages = document.querySelectorAll('img.manga-page');
+    // A transparent 1x1 GIF so we don't trigger broken image icons
+    const emptyImage = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
     mangaPages.forEach(image => {
-      image.removeAttribute('src');
+      // Only abort requests that are actively downloading
+      if (!image.complete) {
+        image.src = emptyImage;
+      }
     });
   }
 

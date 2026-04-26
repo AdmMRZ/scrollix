@@ -91,11 +91,11 @@
            stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
     </a>
     {% else %}
-    <a href="{% url 'manga-detail' manga.mangadex_id %}" class="btn btn-cta">Finished! Back to Details</a>
+    <a href="{% url 'manga-detail' manga.mangadex_id %}" class="btn btn-cta">Finished!</a>
     {% endif %}
   </nav>
 </div>
-<div class="reader-progress" aria-live="polite" aria-label="Reading progress">1 / {{ page_count }}</div>
+<div class="reader-progress" aria-live="polite" aria-label="Reading progress" data-chapter="{{ chapter.display_number }}">{{ chapter.display_number }} &bull; 1 / {{ page_count }}</div>
 {% endif %}
 {% endblock %}
 
