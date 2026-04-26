@@ -17,8 +17,22 @@
   if (!window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
     timer = setInterval(next, 5000);
   }
+  // Touch swipe support
+  let touchStartX = 0, touchStartY = 0;
+  track.addEventListener('touchstart', e => {
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
+  track.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    const dy = e.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 50) {
+      dx < 0 ? (goTo(current + 1), resetTimer()) : (goTo(current - 1), resetTimer());
+    }
+  }, { passive: true });
   goTo(0);
 })();
+
 (function () {
   const hamburger = document.querySelector('.hamburger');
   const menu = document.querySelector('.nav-mobile-menu');
