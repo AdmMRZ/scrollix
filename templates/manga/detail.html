@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load manga_extras %}
 {% block title %}{{ manga.title }} — Scrollix{% endblock %}
 {% block meta_description %}Read {{ manga.title }} online free. {{ manga.description|truncatechars:120 }}{% endblock %}
 {% block content %}
@@ -13,14 +14,14 @@
 {% else %}
 <section class="detail-hero" aria-label="{{ manga.title }} details">
   {% if manga.cover_url %}
-  <div class="detail-hero-bg" style="background-image:url('{{ manga.cover_url }}')"></div>
+  <div class="detail-hero-bg" style="background-image:url('{{ manga.cover_url|img_proxy }}')"></div>
   {% endif %}
   <div class="container">
     <div class="detail-hero-content">
       <div class="detail-cover">
         {% if manga.cover_url %}
-        <img src="{{ manga.cover_url }}" alt="{{ manga.title }} cover"
-             loading="eager" referrerpolicy="no-referrer">
+        <img src="{{ manga.cover_url|img_proxy }}" alt="{{ manga.title }} cover"
+             loading="eager" onerror="this.style.display='none'">
         {% endif %}
       </div>
       <div class="detail-info">

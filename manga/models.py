@@ -44,16 +44,6 @@ class CachedManga(models.Model):
         ttl = ttl_seconds or settings.CACHE_TTL_MANGA
         age = (timezone.now() - self.cached_at).total_seconds()
         return age > ttl
-    @property
-    def proxied_cover_url(self):
-        if not self.cover_url:
-            return ""
-        use_proxy = getattr(settings, 'USE_IMAGE_PROXY', False)
-        if use_proxy:
-            import urllib.parse
-            return f"/api/img-proxy/?url={urllib.parse.quote(self.cover_url, safe='')}"
-        return self.cover_url
-        
 class CachedChapter(models.Model):
     mangadex_id = models.CharField(max_length=36, unique=True, db_index=True)
     manga = models.ForeignKey(

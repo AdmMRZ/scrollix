@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load manga_extras %}
 {% block title %}Scrollix{% endblock %}
 {% block content %}
 <div class="container" style="padding-top:2rem">
@@ -9,9 +10,9 @@
         {% for manga in featured|slice:":6" %}
         <div class="carousel-slide">
           {% if manga.cover_url %}
-          <img class="carousel-slide-img" src="{{ manga.cover_url }}"
+          <img class="carousel-slide-img" src="{{ manga.cover_url|img_proxy }}"
                alt="{{ manga.title }} cover" loading="{% if forloop.first %}eager{% else %}lazy{% endif %}"
-               referrerpolicy="no-referrer">
+               onerror="this.style.display='none'">
           {% endif %}
           <div class="carousel-slide-content">
             <div class="carousel-slide-meta">
@@ -55,8 +56,8 @@
       <a href="{% url 'manga-detail' manga.mangadex_id %}" class="manga-card">
         <div class="manga-card-cover">
           {% if manga.cover_url %}
-          <img src="{{ manga.cover_url }}" alt="{{ manga.title }} cover"
-               loading="lazy" referrerpolicy="no-referrer">
+          <img src="{{ manga.cover_url|img_proxy }}" alt="{{ manga.title }} cover"
+               loading="lazy" onerror="this.style.display='none'">
           {% else %}
           <div class="skeleton" style="width:100%;height:100%"></div>
           {% endif %}

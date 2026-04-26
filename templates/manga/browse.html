@@ -1,4 +1,5 @@
 {% extends 'base.html' %}
+{% load manga_extras %}
 {% block title %}Scrollix{% endblock %}
 {% block content %}
 <div class="adv-search-wrapper">
@@ -116,8 +117,8 @@
       <a href="{% url 'manga-detail' manga.mangadex_id %}" class="adv-card">
         <div class="adv-card-cover">
           {% if manga.cover_url %}
-          <img src="{{ manga.cover_url }}" alt="{{ manga.title }} cover"
-               loading="lazy" referrerpolicy="no-referrer">
+          <img src="{{ manga.cover_url|img_proxy }}" alt="{{ manga.title }} cover"
+               loading="lazy" onerror="this.style.display='none'">
           {% else %}
           <div class="adv-card-no-cover">
             <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
