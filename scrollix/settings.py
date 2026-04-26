@@ -73,7 +73,7 @@ LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/'
 ADMIN_URL = config('ADMIN_URL', default='scrollix-admin/')
 USE_IMAGE_PROXY = config('USE_IMAGE_PROXY', default=False, cast=bool)
-MANGADEX_API_BASE = config('MANGADEX_API_BASE', default='https://api.mangadex.org')
+MANGADEX_API_BASE = config('MANGADEX_API_BASE', default='')
 CACHE_TTL_MANGA = config('CACHE_TTL_MANGA', default=86400, cast=int)              
 CACHE_TTL_CHAPTERS = config('CACHE_TTL_CHAPTERS', default=3600, cast=int)          
 CONTENT_SECURITY_POLICY = {

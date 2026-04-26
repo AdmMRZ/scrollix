@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 class MangaDexClient:
     def __init__(self):
-        self.base_url = getattr(settings, 'MANGADEX_API_BASE', 'https://api.mangadex.org')
+        self.base_url = getattr(settings, 'MANGADEX_API_BASE', None)
         self.timeout = getattr(settings, 'MANGADEX_API_TIMEOUT', 25)
         self.headers = {
             'User-Agent': 'Scrollix/1.0 (personal manga reader; contact via github)',
