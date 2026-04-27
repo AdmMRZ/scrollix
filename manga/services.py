@@ -91,7 +91,7 @@ def fetch_latest_manga(limit: int = 24) -> list[dict]:
     return _fetch_manga_by_order('latestUploadedChapter', limit)
 
 def _fetch_manga_by_order(order_key: str, limit: int) -> list[dict]:
-    """Helper to fetch manga with default includes and rating."""
+    
     return fetch_manga_list({
         f'order[{order_key}]': 'desc',
         'limit': limit,
@@ -127,14 +127,12 @@ def _parse_cover_url(manga_data: dict) -> str:
     return ''
 
 def _get_rel_attr(data: dict, rel_type: str, attr_name: str) -> str:
-    """Safely extracts an attribute from a relationship list."""
     for rel in data.get('relationships', []):
         if rel.get('type') == rel_type:
             return rel.get('attributes', {}).get(attr_name, '')
     return ''
 
 def _get_rel_id(data: dict, rel_type: str) -> str:
-    """Safely extracts an ID from a relationship list."""
     for rel in data.get('relationships', []):
         if rel.get('type') == rel_type:
             return rel.get('id', '')
@@ -468,7 +466,6 @@ def _search_cache_key(search_query: MangaSearchQuery) -> str:
     return "search:" + "|".join(parts)
 
 def _build_search_params(search_query: MangaSearchQuery) -> dict:
-    """Builds the API request parameters from a MangaSearchQuery object."""
     params: dict = {
         'limit': search_query.page_size,
         'offset': (search_query.page - 1) * search_query.page_size,
