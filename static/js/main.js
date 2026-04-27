@@ -230,3 +230,47 @@
       });
   });
 })();
+
+
+(function () {
+  const contentArea = document.getElementById('library-content-area');
+  const tabs = document.querySelectorAll('.lib-tab');
+  if (!contentArea || !tabs.length) return;
+
+  function updateActiveTab(clickedTab) {
+    tabs.forEach(tab => tab.classList.remove('active'));
+    clickedTab.classList.add('active');
+  }
+
+  async function fetchTabContent(url) {
+    contentArea.style.opacity = '0.5';
+    try {
+      const res = await fetch(url, {
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const html = await res.text();
+      contentArea.innerHTML = html;
+      window.history.pushState({ tab: url }, '', url);
+    } catch (err) {
+      console.error('AJAX Tab Fetch Failed:', err);
+      window.location.href = url; // Fallback
+    } finally {
+      contentArea.style.opacity = '1';
+    }
+  }
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', (e) => {
+      e.preventDefault();
+      const url = tab.getAttribute('href');
+      updateActiveTab(tab);
+      fetchTabContent(url);
+    });
+  });
+
+  window.addEventListener('popstate', () => {
+    window.location.reload();
+  });
+})();
+

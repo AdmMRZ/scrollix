@@ -14,50 +14,9 @@
       History <span class="lib-badge">{{ history_count }}</span>
     </a>
   </nav>
-  {% if active_tab != 'history' %}
-    {% if bookmarks %}
-    <div class="grid-manga">
-      {% for bm in bookmarks %}
-      <a href="{% url 'manga-detail' bm.manga.mangadex_id %}" class="manga-card">
-        <div class="manga-card-cover">
-          {% if bm.manga.cover_url %}
-          <img src="{{ bm.manga.cover_url|img_proxy }}" alt="{{ bm.manga.title }} cover"
-               loading="lazy" onerror="this.style.display='none'">
-          {% else %}
-          <div class="skeleton" style="width:100%;height:100%"></div>
-          {% endif %}
-        </div>
-        <div class="manga-card-info">
-          <div class="manga-card-title">{{ bm.manga.title }}</div>
-          <div class="manga-card-meta">Added {{ bm.created_at|date:"M j, Y" }}</div>
-        </div>
-      </a>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div class="empty-state">
-      <div class="empty-state-title">Nothing here yet</div>
-      <p style="color:var(--color-muted)">Bookmark manga from the detail page to add them to this list.</p>
-      <a href="{% url 'browse' %}" class="btn btn-primary" style="margin-top:1rem">Browse Manga</a>
-    </div>
-    {% endif %}
-  {% else %}
-    {% if history %}
-    <div class="chapter-list">
-      {% for entry in history %}
-      <a href="{% url 'reader' entry.chapter.mangadex_id %}" class="chapter-item">
-        <span class="chapter-item-num">{{ entry.manga.title|truncatechars:30 }}</span>
-        <span class="chapter-item-title">{{ entry.chapter.display_number }}</span>
-        <span class="chapter-item-meta">{{ entry.read_at|date:"M j, Y" }}</span>
-      </a>
-      {% endfor %}
-    </div>
-    {% else %}
-    <div class="empty-state">
-      <div class="empty-state-title">No read history</div>
-      <p style="color:var(--color-muted)">Start reading manga to track your progress here.</p>
-    </div>
-    {% endif %}
-  {% endif %}
+  
+  <div id="library-content-area">
+    {% include 'accounts/_library_content.html' %}
+  </div>
 </div>
 {% endblock %}
