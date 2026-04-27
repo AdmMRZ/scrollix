@@ -166,16 +166,20 @@
 
 (function () {
   function abortPendingImageRequests() {
-    const mangaPages = document.querySelectorAll('img.manga-page');
+    const imagesToAbort = document.querySelectorAll('img.manga-page, .adv-card-cover img');
     const emptyImage = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
-    mangaPages.forEach(image => {
+    
+    imagesToAbort.forEach(image => {
       if (!image.complete) {
         image.src = emptyImage;
       }
     });
   }
 
-  const navigationLinks = document.querySelectorAll('.reader-nav a.btn, .reader-topbar a.btn');
+  const navigationLinks = document.querySelectorAll(
+    '.reader-nav a.btn, .reader-topbar a.btn, .adv-card, .pagination a'
+  );
+  
   navigationLinks.forEach(link => {
     link.addEventListener('click', abortPendingImageRequests);
   });
