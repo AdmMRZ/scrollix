@@ -1,6 +1,7 @@
 from __future__ import annotations
 import logging
 import urllib.parse
+from concurrent.futures import ThreadPoolExecutor
 from typing import Optional
 from django.db import transaction
 from django.conf import settings
@@ -84,19 +85,17 @@ def fetch_tags() -> list[dict]:
     return data.get('data', []) if data else []
 
 def fetch_popular_manga(limit: int = 20) -> list[dict]:
-    return fetch_manga_list({
-        'order[followedCount]': 'desc',
-        'limit': limit,
-        'includes[]': ['cover_art', 'author'],
-        'contentRating[]': ['safe', 'suggestive'],
-        'availableTranslatedLanguage[]': 'en',
-    })
+    return _fetch_manga_by_order('followedCount', limit)
 
 def fetch_latest_manga(limit: int = 24) -> list[dict]:
+    return _fetch_manga_by_order('latestUploadedChapter', limit)
+
+def _fetch_manga_by_order(order_key: str, limit: int) -> list[dict]:
+    """Helper to fetch manga with default includes and rating."""
     return fetch_manga_list({
-        'order[latestUploadedChapter]': 'desc',
+        f'order[{order_key}]': 'desc',
         'limit': limit,
-        'includes[]': ['cover_art', 'author'],
+        'includes[]': ['cover_art', 'author', 'artist'],
         'contentRating[]': ['safe', 'suggestive'],
         'availableTranslatedLanguage[]': 'en',
     })
@@ -122,12 +121,23 @@ def build_page_urls(at_home: dict, quality: str = 'data', use_proxy: bool = None
     return direct_urls
 
 def _parse_cover_url(manga_data: dict) -> str:
-    mangadex_id = manga_data.get('id', '')
-    for rel in manga_data.get('relationships', []):
-        if rel.get('type') == 'cover_art':
-            filename = rel.get('attributes', {}).get('fileName', '')
-            if filename:
-                return f"https://uploads.mangadex.org/covers/{mangadex_id}/{filename}.256.jpg"
+    filename = _get_rel_attr(manga_data, 'cover_art', 'fileName')
+    if filename:
+        return f"https://uploads.mangadex.org/covers/{manga_data.get('id')}/{filename}.256.jpg"
+    return ''
+
+def _get_rel_attr(data: dict, rel_type: str, attr_name: str) -> str:
+    """Safely extracts an attribute from a relationship list."""
+    for rel in data.get('relationships', []):
+        if rel.get('type') == rel_type:
+            return rel.get('attributes', {}).get(attr_name, '')
+    return ''
+
+def _get_rel_id(data: dict, rel_type: str) -> str:
+    """Safely extracts an ID from a relationship list."""
+    for rel in data.get('relationships', []):
+        if rel.get('type') == rel_type:
+            return rel.get('id', '')
     return ''
 
 def fetch_manga_statistics(mangadex_ids: list[str]) -> dict:
@@ -147,15 +157,9 @@ def _extract_manga_title(attrs: dict) -> str:
                 return alt['en']
     return title or titles.get('ja-ro') or titles.get('ja') or next(iter(titles.values()), 'Unknown')
 
-def _extract_manga_creators(relationships: list) -> tuple[str, str]:
-    author, artist = '', ''
-    for rel in relationships:
-        name = rel.get('attributes', {}).get('name', '')
-        rel_type = rel.get('type')
-        if rel_type == 'author' and not author:
-            author = name
-        elif rel_type == 'artist' and not artist:
-            artist = name
+def _extract_manga_creators(manga_data: dict) -> tuple[str, str]:
+    author = _get_rel_attr(manga_data, 'author', 'name') or 'Unknown'
+    artist = _get_rel_attr(manga_data, 'artist', 'name') or 'Unknown'
     return author, artist
 
 def _resolve_manga_type(original_language: str) -> str:
@@ -199,8 +203,7 @@ def _build_manga_instance(manga_data: dict, stats: dict) -> tuple[CachedManga, l
     attrs = manga_data.get('attributes', {})
     mangadex_id = manga_data.get('id', '')
     title = _extract_manga_title(attrs)
-    relationships = manga_data.get('relationships', [])
-    author, artist = _extract_manga_creators(relationships)
+    author, artist = _extract_manga_creators(manga_data)
     follow_count = stats.get(mangadex_id, {}).get('follows', 0) if stats else 0
 
     instance = CachedManga(
@@ -399,24 +402,57 @@ def get_homepage_data() -> dict:
     featured_ids = cache.get('home_featured_ids')
     latest_ids = cache.get('home_latest_ids')
 
-    if not featured_ids:
-        raw_popular = fetch_popular_manga(limit=6)
-        featured_ids = [m['id'] for m in raw_popular]
-        stats = fetch_manga_statistics(featured_ids)
-        _save_mangas_to_cache(raw_popular, stats=stats)
-        cache.set('home_featured_ids', featured_ids, getattr(settings, 'CACHE_TTL_MANGA', 86400))
+    featured_manga = []
+    latest_manga = []
 
-    if not latest_ids:
-        raw_latest = fetch_latest_manga(limit=25)
-        latest_ids = [m['id'] for m in raw_latest]
-        _save_mangas_to_cache(raw_latest)
-        cache.set('home_latest_ids', latest_ids, getattr(settings, 'CACHE_TTL_MANGA', 86400))
-        cache.set('home_latest_total', 10000, getattr(settings, 'CACHE_TTL_MANGA', 86400))
+    if featured_ids and latest_ids:
+        all_ids = featured_ids + latest_ids
+        all_mangas = _get_mangas_by_ids(all_ids)
+        manga_map = {m.mangadex_id: m for m in all_mangas}
+        
+        return {
+            'featured': [manga_map[i] for i in featured_ids if i in manga_map],
+            'latest': [manga_map[i] for i in latest_ids if i in manga_map],
+        }
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        future_featured = None
+        future_latest = None
+
+        if not featured_ids:
+            future_featured = executor.submit(_refresh_featured_manga)
+        if not latest_ids:
+            future_latest = executor.submit(_refresh_latest_manga)
+
+        featured_manga = future_featured.result() if future_featured else _get_mangas_by_ids(featured_ids)
+        latest_manga = future_latest.result() if future_latest else _get_mangas_by_ids(latest_ids)
 
     return {
-        'featured': _get_mangas_by_ids(featured_ids),
-        'latest': _get_mangas_by_ids(latest_ids),
+        'featured': featured_manga,
+        'latest': latest_manga,
     }
+
+def _refresh_featured_manga() -> list[CachedManga]:
+    raw_popular = fetch_popular_manga(limit=6)
+    featured_ids = [m['id'] for m in raw_popular]
+    
+    stats = fetch_manga_statistics(featured_ids)
+    mangas = _save_mangas_to_cache(raw_popular, stats=stats)
+    
+    ttl = getattr(settings, 'CACHE_TTL_MANGA', 86400)
+    cache.set('home_featured_ids', featured_ids, ttl)
+    return mangas
+
+def _refresh_latest_manga() -> list[CachedManga]:
+    raw_latest = fetch_latest_manga(limit=25)
+    latest_ids = [m['id'] for m in raw_latest]
+    
+    mangas = _save_mangas_to_cache(raw_latest)
+    
+    ttl = getattr(settings, 'CACHE_TTL_MANGA', 86400)
+    cache.set('home_latest_ids', latest_ids, ttl)
+    cache.set('home_latest_total', 10000, ttl)
+    return mangas
 
 def _search_cache_key(search_query: MangaSearchQuery) -> str:
     parts = [

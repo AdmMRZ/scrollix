@@ -165,24 +165,38 @@
 })();
 
 (function () {
-  const imageSelector = 'img.manga-page, .adv-card-cover img';
-  const emptyImage = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
-
-  if (!document.querySelector(imageSelector)) return;
-
-  function abortPendingImageRequests() {
-    const imagesToAbort = document.querySelectorAll(imageSelector);
-    let aborted = 0;
-
-    for (const image of imagesToAbort) {
-      if (aborted >= 24) break;
-      if (!image.complete && image.currentSrc) {
-        image.src = emptyImage;
-        aborted += 1;
+  const IMAGE_SELECTOR = 'img.manga-page, .adv-card-cover img';
+  const EMPTY_GIF = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
+  function abortAllPendingResources() {
+    window.stop();
+    const pendingImgs = document.querySelectorAll(IMAGE_SELECTOR);
+    pendingImgs.forEach(img => {
+      if (!img.complete) {
+        img.src = EMPTY_GIF;
       }
-    }
+    });
   }
-  window.addEventListener('pagehide', abortPendingImageRequests, { once: true });
+  function handleFastNavigation(e) {
+    const link = e.currentTarget;
+    if (!link.href || link.href.includes('#')) return;
+
+    abortAllPendingResources();
+    window.location.href = link.href;
+    e.preventDefault();
+  }
+  const navSelectors = [
+    '.reader-nav a', 
+    '.reader-topbar a', 
+    '.adv-card', 
+    '.pagination a'
+  ];
+
+  navSelectors.forEach(selector => {
+    document.querySelectorAll(selector).forEach(el => {
+      el.addEventListener('click', handleFastNavigation);
+    });
+  });
+  window.addEventListener('pagehide', abortAllPendingResources, { once: true });
 })();
 
 (function () {
