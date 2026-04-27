@@ -181,7 +181,6 @@
   });
 })();
 
-// ── Show-all chapters (manga detail page) ───────────────────────────────────
 (function () {
   const btn = document.getElementById('show-all-chapters-btn');
   if (!btn) return;
@@ -190,7 +189,7 @@
     const mangaId = btn.dataset.mangaId;
     const label   = document.getElementById('show-all-label');
     const spinner = document.getElementById('show-all-spinner');
-    const wrapper = document.getElementById('show-all-wrapper'); // the button's parent div
+    const wrapper = document.getElementById('show-all-wrapper'); 
 
     label.style.display  = 'none';
     spinner.style.display = 'inline-flex';
@@ -202,8 +201,6 @@
         return res.text();
       })
       .then(function (html) {
-        // Replace ONLY the button wrapper with the full chapter list.
-        // The chapters_bottom items that follow the wrapper stay untouched.
         wrapper.outerHTML = html;
       })
       .catch(function (err) {
