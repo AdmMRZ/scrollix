@@ -2,6 +2,7 @@ from __future__ import annotations
 import logging
 import urllib.parse
 from typing import Optional
+from django.db import transaction
 from django.conf import settings
 from django.utils import timezone
 from django.utils.text import slugify
@@ -198,6 +199,8 @@ def _build_manga_instance(manga_data: dict, stats: dict) -> tuple[CachedManga, l
     attrs = manga_data.get('attributes', {})
     mangadex_id = manga_data.get('id', '')
     title = _extract_manga_title(attrs)
+    relationships = manga_data.get('relationships', [])
+    author, artist = _extract_manga_creators(relationships)
     follow_count = stats.get(mangadex_id, {}).get('follows', 0) if stats else 0
 
     instance = CachedManga(
@@ -205,8 +208,8 @@ def _build_manga_instance(manga_data: dict, stats: dict) -> tuple[CachedManga, l
         title=title[:500],
         alt_titles=_extract_alt_titles(attrs, title)[:10],
         description=_extract_description(attrs),
-        author=_extract_manga_creators(manga_data.get('relationships', []))[0][:300],
-        artist=_extract_manga_creators(manga_data.get('relationships', []))[1][:300],
+        author=author[:300],
+        artist=artist[:300],
         status=attrs.get('status', '')[:20],
         custom_type=_resolve_manga_type(attrs.get('originalLanguage', '')),
         cover_url=_parse_cover_url(manga_data),
@@ -217,6 +220,41 @@ def _build_manga_instance(manga_data: dict, stats: dict) -> tuple[CachedManga, l
     )
     genre_data = _extract_genre_data(attrs)
     return instance, genre_data
+
+
+def _sync_manga_genres_bulk(
+    saved_mangas: dict[str, CachedManga],
+    all_genres_data: dict[str, list[tuple[str, str]]],
+    genre_objects: dict[str, Genre],
+) -> None:
+    if not saved_mangas:
+        return
+
+    through_model = CachedManga.genres.through
+    manga_pks = [m.pk for m in saved_mangas.values() if m.pk]
+    if not manga_pks:
+        return
+
+    desired_relations: set[tuple[int, int]] = set()
+    for manga_id, genre_data in all_genres_data.items():
+        manga = saved_mangas.get(manga_id)
+        if not manga or not manga.pk:
+            continue
+        for genre_id, _ in genre_data:
+            genre = genre_objects.get(genre_id)
+            if genre and genre.pk:
+                desired_relations.add((manga.pk, genre.pk))
+
+    with transaction.atomic():
+        through_model.objects.filter(cachedmanga_id__in=manga_pks).delete()
+        if desired_relations:
+            through_model.objects.bulk_create(
+                [
+                    through_model(cachedmanga_id=manga_pk, genre_id=genre_pk)
+                    for manga_pk, genre_pk in desired_relations
+                ],
+                ignore_conflicts=True,
+            )
 
 def _save_mangas_to_cache(manga_data_list: list[dict], stats: dict = None) -> list[CachedManga]:
     if not manga_data_list:
@@ -230,6 +268,9 @@ def _save_mangas_to_cache(manga_data_list: list[dict], stats: dict = None) -> li
             instances.append(instance)
             all_genres_data[instance.mangadex_id] = genre_data
 
+    if not instances:
+        return []
+
     update_fields = [
         'title', 'alt_titles', 'description', 'author', 'artist',
         'status', 'custom_type', 'cover_url', 'year', 'content_rating',
@@ -242,19 +283,16 @@ def _save_mangas_to_cache(manga_data_list: list[dict], stats: dict = None) -> li
         update_fields=update_fields,
     )
 
+    manga_ids = [i.mangadex_id for i in instances]
     saved_mangas = {
         m.mangadex_id: m
-        for m in CachedManga.objects.filter(mangadex_id__in=[i.mangadex_id for i in instances])
+        for m in CachedManga.objects.filter(mangadex_id__in=manga_ids)
     }
 
     all_genre_pairs = list({gid: name for gd in all_genres_data.values() for gid, name in gd}.items())
     genre_objects = {g.mangadex_id: g for g in _upsert_genres(all_genre_pairs)}
 
-    for manga_id, genre_data in all_genres_data.items():
-        manga = saved_mangas.get(manga_id)
-        if manga:
-            genre_pks = [genre_objects[gid].pk for gid, _ in genre_data if gid in genre_objects]
-            manga.genres.set(genre_pks)
+    _sync_manga_genres_bulk(saved_mangas, all_genres_data, genre_objects)
 
     return [saved_mangas[i.mangadex_id] for i in instances if i.mangadex_id in saved_mangas]
 

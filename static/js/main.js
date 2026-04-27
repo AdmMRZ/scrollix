@@ -165,24 +165,24 @@
 })();
 
 (function () {
-  function abortPendingImageRequests() {
-    const imagesToAbort = document.querySelectorAll('img.manga-page, .adv-card-cover img');
-    const emptyImage = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
-    
-    imagesToAbort.forEach(image => {
-      if (!image.complete) {
-        image.src = emptyImage;
-      }
-    });
-  }
+  const imageSelector = 'img.manga-page, .adv-card-cover img';
+  const emptyImage = 'data:image/gif;base64,R0lGODlhAQABAAD/ACwAAAAAAQABAAACADs=';
 
-  const navigationLinks = document.querySelectorAll(
-    '.reader-nav a.btn, .reader-topbar a.btn, .adv-card, .pagination a'
-  );
-  
-  navigationLinks.forEach(link => {
-    link.addEventListener('click', abortPendingImageRequests);
-  });
+  if (!document.querySelector(imageSelector)) return;
+
+  function abortPendingImageRequests() {
+    const imagesToAbort = document.querySelectorAll(imageSelector);
+    let aborted = 0;
+
+    for (const image of imagesToAbort) {
+      if (aborted >= 24) break;
+      if (!image.complete && image.currentSrc) {
+        image.src = emptyImage;
+        aborted += 1;
+      }
+    }
+  }
+  window.addEventListener('pagehide', abortPendingImageRequests, { once: true });
 })();
 
 (function () {
