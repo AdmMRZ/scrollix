@@ -157,94 +157,168 @@ def _extract_manga_creators(relationships: list) -> tuple[str, str]:
             artist = name
     return author, artist
 
-def _save_manga_to_cache(manga_data: dict, stats: dict = None) -> CachedManga:
-    attrs = manga_data.get('attributes', {})
-    mangadex_id = manga_data.get('id', '')
-    
-    follow_count = stats.get(mangadex_id, {}).get('follows', 0) if stats else 0
+def _resolve_manga_type(original_language: str) -> str:
+    type_map = {'ja': 'Manga', 'ko': 'Manhwa', 'zh': 'Manhua'}
+    return next((v for k, v in type_map.items() if k in original_language), 'Manga')
 
-    lang = attrs.get('originalLanguage', '')
-    custom_type_map = {'ja': 'Manga', 'ko': 'Manhwa', 'zh': 'Manhua'}
-    custom_type = next((v for k, v in custom_type_map.items() if k in lang), 'Manga')
-
-    title = _extract_manga_title(attrs)
-    
-    alt_titles = [
+def _extract_alt_titles(attrs: dict, primary_title: str) -> list[str]:
+    return [
         val for alt in attrs.get('altTitles', [])
-        for k, val in alt.items() if val and val != title
+        for k, val in alt.items() if val and val != primary_title
     ]
-    
-    desc = attrs.get('description', {})
-    description = desc.get('en', '') or next(iter(desc.values()), '')
-    
-    author, artist = _extract_manga_creators(manga_data.get('relationships', []))
 
-    manga, _ = CachedManga.objects.update_or_create(
-        mangadex_id=mangadex_id,
-        defaults={
-            'title': title[:500],
-            'alt_titles': alt_titles[:10],
-            'description': description,
-            'author': author[:300],
-            'artist': artist[:300],
-            'status': attrs.get('status', '')[:20],
-            'custom_type': custom_type,
-            'cover_url': _parse_cover_url(manga_data),
-            'year': attrs.get('year'),
-            'content_rating': attrs.get('contentRating', '')[:30],
-            'last_chapter': str(attrs.get('lastChapter') or '')[:20],
-            'follow_count': follow_count,
-        },
-    )
-    tag_ids = []
+def _extract_description(attrs: dict) -> str:
+    desc = attrs.get('description', {})
+    return desc.get('en', '') or next(iter(desc.values()), '')
+
+def _extract_genre_data(attrs: dict) -> list[tuple[str, str]]:
+    genres = []
     for tag in attrs.get('tags', []):
         tag_id = tag.get('id', '')
         tag_name = tag.get('attributes', {}).get('name', {}).get('en', '')
         if tag_id and tag_name:
-            genre, _ = Genre.objects.get_or_create(
-                mangadex_id=tag_id,
-                defaults={'name': tag_name, 'slug': slugify(tag_name)},
-            )
-            tag_ids.append(genre.pk)
-    manga.genres.set(tag_ids)
-    return manga
+            genres.append((tag_id, tag_name))
+    return genres
+
+def _upsert_genres(genre_data: list[tuple[str, str]]) -> list[Genre]:
+    if not genre_data:
+        return []
+    existing = {g.mangadex_id: g for g in Genre.objects.filter(mangadex_id__in=[gid for gid, _ in genre_data])}
+    to_create = [
+        Genre(mangadex_id=gid, name=name, slug=slugify(name))
+        for gid, name in genre_data if gid not in existing
+    ]
+    if to_create:
+        Genre.objects.bulk_create(to_create, ignore_conflicts=True)
+        new_genres = Genre.objects.filter(mangadex_id__in=[g.mangadex_id for g in to_create])
+        existing.update({g.mangadex_id: g for g in new_genres})
+    return [existing[gid] for gid, _ in genre_data if gid in existing]
+
+def _build_manga_instance(manga_data: dict, stats: dict) -> tuple[CachedManga, list[tuple[str, str]]]:
+    attrs = manga_data.get('attributes', {})
+    mangadex_id = manga_data.get('id', '')
+    title = _extract_manga_title(attrs)
+    follow_count = stats.get(mangadex_id, {}).get('follows', 0) if stats else 0
+
+    instance = CachedManga(
+        mangadex_id=mangadex_id,
+        title=title[:500],
+        alt_titles=_extract_alt_titles(attrs, title)[:10],
+        description=_extract_description(attrs),
+        author=_extract_manga_creators(manga_data.get('relationships', []))[0][:300],
+        artist=_extract_manga_creators(manga_data.get('relationships', []))[1][:300],
+        status=attrs.get('status', '')[:20],
+        custom_type=_resolve_manga_type(attrs.get('originalLanguage', '')),
+        cover_url=_parse_cover_url(manga_data),
+        year=attrs.get('year'),
+        content_rating=attrs.get('contentRating', '')[:30],
+        last_chapter=str(attrs.get('lastChapter') or '')[:20],
+        follow_count=follow_count,
+    )
+    genre_data = _extract_genre_data(attrs)
+    return instance, genre_data
+
+def _save_mangas_to_cache(manga_data_list: list[dict], stats: dict = None) -> list[CachedManga]:
+    if not manga_data_list:
+        return []
+
+    all_genres_data: dict[str, list[tuple[str, str]]] = {}
+    instances = []
+    for manga_data in manga_data_list:
+        instance, genre_data = _build_manga_instance(manga_data, stats or {})
+        if instance.mangadex_id:
+            instances.append(instance)
+            all_genres_data[instance.mangadex_id] = genre_data
+
+    update_fields = [
+        'title', 'alt_titles', 'description', 'author', 'artist',
+        'status', 'custom_type', 'cover_url', 'year', 'content_rating',
+        'last_chapter', 'follow_count',
+    ]
+    CachedManga.objects.bulk_create(
+        instances,
+        update_conflicts=True,
+        unique_fields=['mangadex_id'],
+        update_fields=update_fields,
+    )
+
+    saved_mangas = {
+        m.mangadex_id: m
+        for m in CachedManga.objects.filter(mangadex_id__in=[i.mangadex_id for i in instances])
+    }
+
+    all_genre_pairs = list({gid: name for gd in all_genres_data.values() for gid, name in gd}.items())
+    genre_objects = {g.mangadex_id: g for g in _upsert_genres(all_genre_pairs)}
+
+    for manga_id, genre_data in all_genres_data.items():
+        manga = saved_mangas.get(manga_id)
+        if manga:
+            genre_pks = [genre_objects[gid].pk for gid, _ in genre_data if gid in genre_objects]
+            manga.genres.set(genre_pks)
+
+    return [saved_mangas[i.mangadex_id] for i in instances if i.mangadex_id in saved_mangas]
+
+def _save_manga_to_cache(manga_data: dict, stats: dict = None) -> CachedManga:
+    results = _save_mangas_to_cache([manga_data], stats=stats)
+    return results[0] if results else None
 
 def _get_mangas_by_ids(ids: list[str]) -> list[CachedManga]:
-    """Fetches CachedManga objects from DB and orders them according to the provided ID list."""
     if not ids:
         return []
     qs = CachedManga.objects.prefetch_related('genres').filter(mangadex_id__in=ids)
     mangas = {m.mangadex_id: m for m in qs}
     return [mangas[i] for i in ids if i in mangas]
-def _save_chapters_to_cache(
-    manga: CachedManga, chapters_data: list[dict]
-) -> None:
-    for ch in chapters_data:
-        attrs = ch.get('attributes', {})
-        chapter_id = ch.get('id', '')
-        if not chapter_id:
-            continue
-        scanlation = ''
-        for rel in ch.get('relationships', []):
-            if rel.get('type') == 'scanlation_group':
-                scanlation = rel.get('attributes', {}).get('name', '') or ''
-                break
-        published_str = attrs.get('publishAt') or attrs.get('createdAt')
-        published_at = None
-        if published_str:
-            published_at = parse_datetime(published_str)
-        CachedChapter.objects.update_or_create(
-            mangadex_id=chapter_id,
-            defaults={
-                'manga': manga,
-                'chapter_number': str(attrs.get('chapter') or '')[:20],
-                'volume': str(attrs.get('volume') or '')[:20],
-                'title': str(attrs.get('title') or '')[:500],
-                'language': attrs.get('translatedLanguage', 'en')[:10],
-                'pages_count': attrs.get('pages', 0),
-                'published_at': published_at,
-                'scanlation_group': scanlation[:300],
-            },
+def _extract_scanlation_group(relationships: list[dict]) -> str:
+    for rel in relationships:
+        if rel.get('type') == 'scanlation_group':
+            return rel.get('attributes', {}).get('name', '') or ''
+    return ''
+
+def _parse_chapter_published_date(attrs: dict):
+    published_str = attrs.get('publishAt') or attrs.get('createdAt')
+    if published_str:
+        return parse_datetime(published_str)
+    return None
+
+def _build_chapter_instance(manga: CachedManga, chapter_data: dict) -> CachedChapter | None:
+    chapter_id = chapter_data.get('id', '')
+    if not chapter_id:
+        return None
+
+    attrs = chapter_data.get('attributes', {})
+    scanlation = _extract_scanlation_group(chapter_data.get('relationships', []))
+    published_at = _parse_chapter_published_date(attrs)
+
+    return CachedChapter(
+        mangadex_id=chapter_id,
+        manga=manga,
+        chapter_number=str(attrs.get('chapter') or '')[:20],
+        volume=str(attrs.get('volume') or '')[:20],
+        title=str(attrs.get('title') or '')[:500],
+        language=attrs.get('translatedLanguage', 'en')[:10],
+        pages_count=attrs.get('pages', 0),
+        published_at=published_at,
+        scanlation_group=scanlation[:300],
+        cached_at=timezone.now(),
+    )
+
+def _save_chapters_to_cache(manga: CachedManga, chapters_data: list[dict]) -> None:
+    chapters_to_upsert = []
+    
+    for ch_data in chapters_data:
+        chapter = _build_chapter_instance(manga, ch_data)
+        if chapter:
+            chapters_to_upsert.append(chapter)
+
+    if chapters_to_upsert:
+        CachedChapter.objects.bulk_create(
+            chapters_to_upsert,
+            update_conflicts=True,
+            unique_fields=['mangadex_id'],
+            update_fields=[
+                'chapter_number', 'volume', 'title', 'language', 
+                'pages_count', 'published_at', 'scanlation_group', 'cached_at'
+            ]
         )
 def get_or_fetch_manga(mangadex_id: str) -> CachedManga | None:
     manga = selectors.get_manga_by_mangadex_id(mangadex_id)
@@ -291,15 +365,13 @@ def get_homepage_data() -> dict:
         raw_popular = fetch_popular_manga(limit=6)
         featured_ids = [m['id'] for m in raw_popular]
         stats = fetch_manga_statistics(featured_ids)
-        for m in raw_popular:
-            _save_manga_to_cache(m, stats=stats)
+        _save_mangas_to_cache(raw_popular, stats=stats)
         cache.set('home_featured_ids', featured_ids, getattr(settings, 'CACHE_TTL_MANGA', 86400))
 
     if not latest_ids:
         raw_latest = fetch_latest_manga(limit=25)
         latest_ids = [m['id'] for m in raw_latest]
-        for m in raw_latest:
-            _save_manga_to_cache(m)
+        _save_mangas_to_cache(raw_latest)
         cache.set('home_latest_ids', latest_ids, getattr(settings, 'CACHE_TTL_MANGA', 86400))
         cache.set('home_latest_total', 10000, getattr(settings, 'CACHE_TTL_MANGA', 86400))
 
@@ -398,12 +470,9 @@ def search_manga(
 
     results = data.get('data', [])
     total = data.get('total', len(results))
-    manga_list = []
-    ids = []
-    for m in results:
-        cached = _save_manga_to_cache(m)
-        manga_list.append(cached)
-        ids.append(cached.mangadex_id)
+
+    manga_list = _save_mangas_to_cache(results)
+    ids = [m.mangadex_id for m in manga_list]
 
     cache.set(cache_key, (ids, total), ttl)
 
