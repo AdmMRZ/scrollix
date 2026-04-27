@@ -1,6 +1,6 @@
 import json
 import urllib.parse
-import requests as _requests
+import requests
 
 from django.views.generic import View
 from django.contrib.auth.mixins import LoginRequiredMixin
@@ -8,11 +8,7 @@ from django.http import JsonResponse, StreamingHttpResponse, HttpResponse
 from django_ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
 from . import selectors, services
-
-_PROXY_HEADERS = {
-    'User-Agent': 'Scrollix/1.0 (personal manga reader; contact via github)',
-    'Referer': 'https://mangadex.org/',
-}
+from .integrations import mangadex_client
 
 _ALLOWED_HOSTS = {
     'uploads.mangadex.org',
@@ -27,33 +23,24 @@ class ImageProxyView(View):
         if not raw_url:
             return HttpResponse(status=400)
 
-        try:
-            parsed = urllib.parse.urlparse(raw_url)
-        except Exception:
-            return HttpResponse(status=400)
-
-        if parsed.hostname not in _ALLOWED_HOSTS:
+        if not self._is_valid_host(raw_url):
             return HttpResponse(status=403)
 
         try:
-            upstream = _requests.get(
-                raw_url,
-                headers=_PROXY_HEADERS,
-                timeout=15,
-                stream=True,
-            )
-            upstream.raise_for_status()
-        except _requests.RequestException:
+            stream_content, content_type = mangadex_client.stream_image(raw_url)
+        except requests.RequestException:
             return HttpResponse(status=502)
 
-        content_type = upstream.headers.get('Content-Type', 'image/jpeg')
-        response = StreamingHttpResponse(
-            upstream.iter_content(chunk_size=8192),
-            content_type=content_type,
-        )
+        response = StreamingHttpResponse(stream_content, content_type=content_type)
         response['Cache-Control'] = 'public, max-age=86400'
         return response
-
+        
+    def _is_valid_host(self, raw_url: str) -> bool:
+        try:
+            parsed = urllib.parse.urlparse(raw_url)
+            return parsed.hostname in _ALLOWED_HOSTS
+        except Exception:
+            return False
 
 @method_decorator(ratelimit(key='user', rate='30/m', method='POST', block=True), name='dispatch')
 class ToggleBookmarkView(LoginRequiredMixin, View):

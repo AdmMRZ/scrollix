@@ -57,4 +57,20 @@ class MangaDexClient:
             logger.error("MangaDex API error for %s: %s", path, exc)
             raise
 
+    def stream_image(self, url: str) -> tuple[iter, str]:
+        headers = {
+            'User-Agent': 'Scrollix/1.0 (personal manga reader; contact via github)',
+            'Referer': 'https://mangadex.org/',
+        }
+        response = self.session.get(
+            url,
+            headers=headers,
+            timeout=15,
+            stream=True,
+        )
+        response.raise_for_status()
+        content_type = response.headers.get('Content-Type', 'image/jpeg')
+        return response.iter_content(chunk_size=8192), content_type
+
+
 mangadex_client = MangaDexClient()
