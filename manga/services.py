@@ -566,12 +566,17 @@ def toggle_bookmark(user, manga: CachedManga, list_type: str = 'reading') -> dic
         existing.save(update_fields=['list_type', 'updated_at'])
         return {'action': 'updated', 'bookmark': existing}
     return {'action': 'unchanged', 'bookmark': existing}
+
 def record_read(user, chapter: CachedChapter) -> ReadHistory:
     obj, _ = ReadHistory.objects.update_or_create(
         user=user,
         manga=chapter.manga,
         defaults={'chapter': chapter},
     )
+    excess_ids = list(ReadHistory.objects.filter(user=user).order_by('-read_at')[20:].values_list('id', flat=True))
+    if excess_ids:
+        ReadHistory.objects.filter(id__in=excess_ids).delete()
+        
     return obj
 def seed_genres_from_api() -> int:
     tags = fetch_tags()

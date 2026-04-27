@@ -32,7 +32,7 @@ class LibraryView(LoginRequiredMixin, TemplateView):
         active_tab = self.request.GET.get('tab', 'reading')
         list_types = ['reading', 'plan_to_read', 'completed', 'on_hold', 'dropped']
         if active_tab == 'history':
-            ctx['history'] = selectors.get_user_read_history(user, limit=100)
+            ctx['history'] = selectors.get_user_read_history(user, limit=20)
         elif active_tab in list_types:
             ctx['bookmarks'] = selectors.get_user_bookmarks(user, list_type=active_tab)
         else:
@@ -42,7 +42,7 @@ class LibraryView(LoginRequiredMixin, TemplateView):
             lt: selectors.get_user_bookmarks(user, list_type=lt).count()
             for lt in list_types
         }
-        ctx['history_count'] = selectors.get_user_read_history(user, limit=9999).count()
+        ctx['history_count'] = selectors.get_user_read_history(user, limit=20).count()
         ctx['active_tab'] = active_tab
         ctx['bookmark_choices'] = [
             ('reading', 'Reading'),
