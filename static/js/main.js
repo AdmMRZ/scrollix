@@ -274,3 +274,45 @@
   });
 })();
 
+(function () {
+  const chapterContainers = document.querySelectorAll('.async-chapters');
+  if (!chapterContainers.length) return;
+
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        const container = entry.target;
+        const mangaId = container.dataset.mangaId;
+        observer.unobserve(container);
+        
+        fetch(`/api/manga/${mangaId}/top-chapters/`)
+          .then(res => {
+            if (!res.ok) throw new Error('API error');
+            return res.json();
+          })
+          .then(data => {
+            if (data.chapters && data.chapters.length > 0) {
+              container.innerHTML = '';
+              data.chapters.forEach(ch => {
+                const a = document.createElement('a');
+                a.href = ch.url;
+                a.className = 'mc-chapter-item';
+                a.innerHTML = `<span>Chapter ${ch.chapter || '?'}</span>`;
+                container.appendChild(a);
+              });
+            } else {
+              container.innerHTML = '<span class="mc-chapter-item">No chapters</span>';
+            }
+          })
+          .catch(err => {
+            console.error(err);
+            container.innerHTML = '<span class="mc-chapter-item" style="color:#fca5a5">Error loading</span>';
+          });
+      }
+    });
+  }, { rootMargin: '100px' });
+
+  chapterContainers.forEach(c => observer.observe(c));
+})();
+
+

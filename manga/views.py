@@ -1,6 +1,6 @@
 import math
 from django.views.generic import TemplateView, View
-from django.http import HttpResponse
+from django.http import HttpResponse, JsonResponse
 from django.template.loader import render_to_string
 from django_ratelimit.decorators import ratelimit
 from django.utils.decorators import method_decorator
@@ -153,3 +153,24 @@ class ReaderView(TemplateView):
             services.record_read(self.request.user, reader_data['chapter'])
         ctx.update(reader_data)
         return ctx
+
+class MangaTopChaptersAPIView(View):
+    def get(self, request, *args, **kwargs):
+        mangadex_id = str(kwargs['mangadex_id'])
+        manga = services.get_or_fetch_manga(mangadex_id)
+        if manga is None:
+            return JsonResponse({'error': 'Not found'}, status=404)
+        
+        chapters = services.get_or_fetch_chapters(manga)
+        chapters.reverse()  
+        top_chapters = chapters[:3]
+        
+        data = [
+            {
+                'id': ch.mangadex_id,
+                'chapter': ch.chapter_number,
+                'title': ch.title,
+                'url': f"/read/{ch.mangadex_id}/"
+            } for ch in top_chapters
+        ]
+        return JsonResponse({'chapters': data})

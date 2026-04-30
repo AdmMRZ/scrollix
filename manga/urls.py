@@ -8,4 +8,5 @@ urlpatterns = [
     path('read/<str:chapter_id>/', views.ReaderView.as_view(), name='reader'),
     path('api/bookmark/', apis.ToggleBookmarkView.as_view(), name='toggle-bookmark'),
     path('api/img-proxy/', apis.ImageProxyView.as_view(), name='img-proxy'),
+    path('api/manga/<str:mangadex_id>/top-chapters/', views.MangaTopChaptersAPIView.as_view(), name='api-top-chapters'),
 ]

@@ -1,0 +1,33 @@
+{% load manga_extras %}
+<div class="manga-card-v2">
+  <div class="mc-cover-wrap">
+    {% if manga.cover_url %}
+    <img src="{{ manga.cover_url|img_proxy }}" class="mc-cover" alt="{{ manga.title }} cover" loading="lazy" onerror="this.style.display='none'">
+    {% else %}
+    <div class="mc-cover skeleton"></div>
+    {% endif %}
+    {% if manga.custom_type %}
+    <span class="mc-origin-tag">
+      {% if manga.custom_type == 'Manga' %}JP
+      {% elif manga.custom_type == 'Manhwa' %}KR
+      {% elif manga.custom_type == 'Manhua' %}CN
+      {% else %}{{ manga.custom_type|slice:":2"|upper }}
+      {% endif %}
+    </span>
+    {% endif %}
+  </div>
+  <div class="mc-info">
+    <div class="mc-header">
+      <h3 class="mc-title"><a href="{% url 'manga-detail' manga.mangadex_id %}">{{ manga.title }}</a></h3>
+      {% if manga.status %}
+      <span class="mc-status {{ manga.status }}">{{ manga.get_status_display|upper }}</span>
+      {% endif %}
+    </div>
+    <div class="mc-chapters async-chapters" data-manga-id="{{ manga.mangadex_id }}">
+      <div class="mc-chapter-skeleton skeleton"></div>
+      <div class="mc-chapter-skeleton skeleton"></div>
+      <div class="mc-chapter-skeleton skeleton"></div>
+    </div>
+    <a href="{% url 'manga-detail' manga.mangadex_id %}" class="btn mc-btn-all">All Chapters</a>
+  </div>
+</div>

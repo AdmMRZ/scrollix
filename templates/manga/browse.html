@@ -114,47 +114,7 @@
     {% if manga_list %}
     <div class="adv-result-grid">
       {% for manga in manga_list %}
-      <a href="{% url 'manga-detail' manga.mangadex_id %}" class="adv-card">
-        <div class="adv-card-cover">
-          {% if manga.cover_url %}
-          <img src="{{ manga.cover_url|img_proxy }}" alt="{{ manga.title }} cover"
-               loading="lazy" onerror="this.style.display='none'">
-          {% else %}
-          <div class="adv-card-no-cover">
-            <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none"
-                 stroke="currentColor" stroke-width="1.5" opacity="0.35">
-              <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
-            </svg>
-          </div>
-          {% endif %}
-        </div>
-        <div class="adv-card-info">
-          <div class="adv-card-title">{{ manga.title }}</div>
-          <div class="adv-card-meta-row">
-            {% if manga.year %}<span class="adv-meta-item"><span class="adv-meta-label">Year:</span> {{ manga.year }}</span>{% endif %}
-            {% if manga.status %}<span class="adv-meta-item"><span class="adv-meta-label">Status:</span> {{ manga.get_status_display }}</span>{% endif %}
-              <span class="adv-meta-item"><span class="adv-meta-label">Type:</span> {{ manga.custom_type|default:"Comic" }}</span>
-          </div>
-          {% if manga.author %}
-          <div class="adv-card-meta-row">
-            <span class="adv-meta-item"><span class="adv-meta-label">Author(s):</span>
-              <span class="adv-card-author">{{ manga.author }}{% if manga.artist and manga.artist != manga.author %}, {{ manga.artist }}{% endif %}</span>
-            </span>
-          </div>
-          {% endif %}
-          {% if manga.genres.all %}
-          <div class="adv-card-tags">
-            <span class="adv-meta-label">Tag(s):</span>
-            {% for genre in manga.genres.all|slice:":8" %}
-            <span class="adv-tag">{{ genre.name }}</span>{% if not forloop.last %},&nbsp;{% endif %}
-            {% endfor %}
-          </div>
-          {% endif %}
-          {% if manga.last_chapter %}
-          <div class="adv-card-ch">Ch.{{ manga.last_chapter }}</div>
-          {% endif %}
-        </div>
-      </a>
+      {% include "manga/_manga_card.html" with manga=manga %}
       {% endfor %}
     </div>
     {% if total_pages > 1 %}
